@@ -83,6 +83,11 @@ The engine is framework-agnostic. It integrates with any OpenAI-compatible LLM e
 Responsibilities:
 
 - Run the pipelined loop. While the model is reasoning, the executor consumes already-ready tool calls and caches their results for the next turn.
+- Select the execution form per turn from the measured dependency graph, not from a fixed pipeline:
+  - Strongly dependent turns (reasoning consumes the previous tool results) run serially; pipelining is not forced.
+  - Independent tool groups run in parallel.
+  - Fully independent groups overlap with model reasoning.
+  - The form is downgraded and upgraded dynamically as the dependency graph is re-measured each turn.
 - Enforce the plan-act-reflect cycle. A turn without reflection is rejected.
 - Track progress per turn. If progress does not exceed a threshold for N turns, switch strategy (prompt form, tool set, then model).
 - Detect stalls (empty or filler output), duplicates (high intent similarity with the previous turn), and timeouts (per-turn and per-tool hard limits).
@@ -105,26 +110,38 @@ Storage model:
 
 - Fact store: append-only storage of every raw tool result, model message, and derived fact. Content addressed for deduplication.
 - Working set: the compact view handed to the model. Contains the current goal, structured digest of history, and the latest tool results. Its token size is kept bounded.
-- Fingerprint: each fact carries a semantic fingerprint (reduced embedding plus extracted key-value pairs). The digest references fingerprints, not text.
+- Fingerprint: two-tier fingerprinting, with exactness carried by hard keys, not by similarity.
+  - Hard-key tier: numbers, paths, ports, identifiers, status codes, and key-value pairs are extracted through a schema-driven normalizer. Matching on hard keys is decisive: identical keys hit, mismatched keys miss. No threshold, no similarity, no ambiguity.
+  - Soft tier: only free-form descriptive text uses a reduced embedding. A soft hit is always returned with a confidence score.
 
 Recall:
 
 - The model may call `recall(fingerprint | query)`. Lookup returns the exact original fact block, not a paraphrase.
-- Digests are monotonic: hard facts (numbers, paths, identifiers) survive compression by construction.
+- Two-level recall protocol:
+  - Precise mode: a hard-key match returns the verbatim block. This path has no uncertainty by construction.
+  - Approximate mode: a soft match is returned only above a confidence threshold, always labeled with its confidence.
+  - Degraded mode: below the threshold, recall never fabricates or paraphrases. It re-renders the full digest of the affected region and explicitly marks it as unverified.
+- Digests are monotonic: hard facts (numbers, paths, identifiers) survive compression by construction and are always expressed as hard keys.
 
-Error handling: recall misses are logged and never silently answered with a paraphrase.
+Error handling: every recall miss or low-confidence hit is logged and routed to the degraded mode; a paraphrase is never returned as a fact.
 
 Invariants:
 
 - Compression never drops a fact from the store.
 - The model never sees a fact block that is not present verbatim in the store.
+- Every fact returned to the model is either verbatim from the store or explicitly marked unverified. No third category exists.
 
 ### Tool Executor
 
 Execution policy:
 
 - Build a dependency graph for every tool group: nodes are tool calls, edges are shared resources (file paths, registry keys, environment variables, config scopes, ordering constraints).
+- Side effects are measured, not trusted. Third-party MCP tools do not reliably declare their side effects, so the executor derives the dependency graph from observation:
+  - File-tree diff before and after execution (mtime plus content hash).
+  - Environment and registry diff before and after execution.
+  - The graph uses the observed side-effect set; declared side effects, when present, seed the observation.
 - Parallel dispatch all weakly-connected components. Intra-component calls execute sequentially in topological order.
+- Conservative tiering for unobservable tools: if observation is incomplete or fails, the call is treated as if it may have mutated anything. It is serialized against all other execution and is excluded from caching. Optionally such tools run inside a sandbox so their real side effects stay inside the observable scope.
 - Preflight resource play is deterministic: it runs the same graph analysis before execution, so conflicts are prevented, not repaired.
 
 Failure handling:
@@ -145,14 +162,17 @@ Routing:
 
 Closed loop:
 
-- Each small-model output is scored after use (outcome based). Scores feed a per-tier quality table.
-- Routing thresholds are recalibrated periodically from the table; the system spends progressively less on chores without measurable quality loss.
+- Objective proxy signals replace subjective quality scores, because chores (digestion, deduplication, progress scoring) have no ground truth for direct scoring:
+  - Divergence rate: a small-model result that disagrees with a large-model review on the same input counts as one divergence. Routing thresholds are tuned from divergence rate, never from a subjective score.
+  - Verifiable features: chores with rule-checkable outcomes (all hard keys retained, duplicates recognized) are scored by automatic rules.
+  - Failure coupling: consecutive tool failures caused by a small-model output force this task back to the large model and record the event.
+- Safety governor on every small-model exit: any scoring noise or divergence causes routing to fall back to a more conservative tier. Calibration failure can only degrade to more conservative routing; it can never silently lower output quality.
 
 ### Cache
 
 Keying:
 
-- Query-type calls (no side effects) are cached by input fingerprint.
+- Query-type calls (no side effects) are cached by input fingerprint. Eligibility is decided by the executor's observed side-effect set; a call whose side effects were not fully observed is never cached.
 - A cache entry records the resource set it depended on: file paths and their mtimes/hashes, config keys, environment variables.
 
 Invalidation:
@@ -210,9 +230,10 @@ Search: queries over event type, tool name, and full-text content.
 
 ## Testing and Benchmark
 
-- Unit tests per module: digest recall accuracy, dependency graph analysis, cache invalidation, replay determinism, cascade calibration.
+- Unit tests per module: digest recall accuracy (hard-key precision, soft-confidence labeling, degraded-mode routing), side-effect observation diffs, dependency graph analysis, cache invalidation, replay determinism, cascade calibration and governor fallback.
 - Determinism test: two replays of one recorded run produce identical output.
-- Benchmarks: three canonical tasks (file reorganization, multi-step data gathering, dependency install). Measure against the baseline estimator; assert speedup and savings.
+- Side-effect test: a tool with undocumented mutations changes files; the executor must detect them via observation and adjust parallelism and cache eligibility accordingly.
+- Benchmarks: three canonical tasks (file reorganization, multi-step data gathering, dependency install). Measure against the baseline estimator; report speedup separately for serial-dominant and tool-intensive workloads rather than claiming a single number.
 - Cross-platform CI: build and run core tests on Linux, Windows, and macOS.
 
 ## Milestones
@@ -227,7 +248,9 @@ Each stage ends with a runnable demo and passing tests.
 
 ## Risks
 
-- Compression accuracy: mitigated by factual monotonicity and exact recall; recall failure must degrade to a full working-set render, never to paraphrase.
-- Parallel side effects: mitigated by preflight graph analysis and snapshot rollback; residual risk confined to unregistered mutating tools.
-- Cache staleness: mitigated by dependency-set validation at read; worst case is a recompute, never a wrong answer.
+- Compression accuracy: mitigated by two-tier fingerprinting (decisive hard keys, confidence-labeled soft tier) and a mandatory degraded mode that re-renders rather than paraphrases. Soft matching is never allowed to fabricate a fact.
+- Parallel side effects: mitigated by measuring side effects via file/env diffs instead of trusting declarations, conservative serialization and cache exclusion for unobservable tools, and snapshot rollback. Residual risk is limited to tools whose mutations escape observation entirely; correctness degrades to serial execution, never to corruption.
+- Cache staleness: mitigated by dependency-set validation at read and cache eligibility gated on fully observed side effects; worst case is a recompute, never a wrong answer.
+- Cascade calibration noise: scoring noise can only move routing toward a more conservative tier; a safety governor reverts any chore to the large model on divergence or repeated failure.
+- Pipelining benefit is workload-dependent: speedup is only claimed and measured for tool-intensive, weakly dependent workloads; serial-dominant workloads are measured and reported honestly.
 - Scope: the full feature set is large; stages are sequenced so that each stage is independently reviewable.
