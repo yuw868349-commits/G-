@@ -6,6 +6,8 @@ SwiftAgent is a high-performance agent execution engine written in C++23. It acc
 
 The engine is framework-agnostic. It integrates with any OpenAI-compatible LLM endpoint and any tool exposed over the Model Context Protocol (MCP).
 
+The core is C++ for performance. A Python SDK wraps the C++ engine through pybind11 so Python developers can run agents in a few lines with identical behavior and zero IPC overhead.
+
 ## Goals
 
 - Reduce end-to-end agent latency through pipelined execution and dependency-aware parallelism.
@@ -13,6 +15,7 @@ The engine is framework-agnostic. It integrates with any OpenAI-compatible LLM e
 - Preserve correctness: no information is lost by compression, no cache returns stale results, no parallel execution corrupts shared state.
 - Provide deterministic replay of any run for debugging and evaluation.
 - Ship as one codebase on Windows, Linux, and macOS.
+- Expose the full engine capability to Python developers through a first-class Python SDK.
 
 ## Non-Goals
 
