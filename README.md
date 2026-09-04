@@ -6,12 +6,15 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Release v0.1.0](https://img.shields.io/badge/release-v0.1.0-blue.svg)](https://github.com/yuw868349-commits/G-/releases/tag/v0.1.0)
 [![CI](https://img.shields.io/github/actions/workflow/status/yuw868349-commits/G-/ci.yml?branch=main&label=CI&logo=github)](https://github.com/yuw868349-commits/G-/actions/workflows/ci.yml)
+[![codecov](https://img.shields.io/codecov/c/github/yuw868349-commits/G-?logo=codecov)](https://codecov.io/gh/yuw868349-commits/G-)
 [![Wheels](https://img.shields.io/github/actions/workflow/status/yuw868349-commits/G-/wheel.yml?label=wheels&logo=github)](https://github.com/yuw868349-commits/G-/actions/workflows/wheel.yml)
 [![Platforms](https://img.shields.io/badge/platforms-linux%20%7C%20macOS%20%7C%20windows-lightgrey?logo=linux&logoColor=white)](#构建)
 [![MCP](https://img.shields.io/badge/MCP-stdio%20%7C%20SSE-6f42c1)](#协议)
+[![Docs](https://img.shields.io/badge/docs-doxygen-blueviolet)](https://github.com/yuw868349-commits/G-/actions/workflows/docs-pages.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![Issues](https://img.shields.io/github/issues/yuw868349-commits/G-)](https://github.com/yuw868349-commits/G-/issues)
 [![Last Commit](https://img.shields.io/github/last-commit/yuw868349-commits/G-)](https://github.com/yuw868349-commits/G-/commits/main)
+[![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 C++23 写的 agent 执行引擎。能跑 plan-act-reflect 的多轮任务，自带上下文管理、工具调用、缓存、回放、遥测。MCP 协议把远程工具接进来，Python SDK 也能调。
 
@@ -188,6 +191,8 @@ docker build -t swiftagent:wheel -f docker/Dockerfile.wheel .
 ## 贡献
 
 PR 走 `.github/pull_request_template.md` 那个流程。提交前跑测试。改动大先开 issue 讨论。
+
+行为准则见 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)。
 
 ## License
 
