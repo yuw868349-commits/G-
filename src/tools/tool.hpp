@@ -1,3 +1,8 @@
+// Intentionally minimal: this file lives in the `tools` module and
+// depends on nothing except the public `core` types. `ToolRegistry`
+// is declared in `core/registry.hpp` so the `core` library can be used
+// without pulling in the `tools` library. The `tools` library, in turn,
+// depends on `core` and provides the built-in tools.
 #pragma once
 
 #include <functional>

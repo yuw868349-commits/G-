@@ -28,17 +28,18 @@ target_include_directories(swiftagent_deps INTERFACE src)
 swiftagent_target_warnings(swiftagent_deps)
 
 add_library(swiftagent_core STATIC
-    src/core/model_cascade.cpp
-    src/core/fact_store.cpp
-    src/core/digest.cpp
+    src/core/cache.cpp
     src/core/context_manager.cpp
     src/core/dependency_graph.cpp
-    src/core/side_effect.cpp
-    src/core/tool_executor.cpp
-    src/core/cache.cpp
-    src/core/replay.cpp
-    src/core/telemetry.cpp
+    src/core/digest.cpp
+    src/core/fact_store.cpp
+    src/core/model_cascade.cpp
     src/core/orchestrator.cpp
+    src/core/replay.cpp
+    src/core/registry.cpp
+    src/core/side_effect.cpp
+    src/core/telemetry.cpp
+    src/core/tool_executor.cpp
     src/mcp/json_rpc.cpp
     src/mcp/mcp_host.cpp
     src/platform/posix_platform.cpp
@@ -52,10 +53,10 @@ if(WIN32)
 endif()
 
 add_library(swiftagent_tools STATIC
-    src/tools/registry.cpp
     src/tools/builtin.cpp
+    src/tools/registry.cpp
 )
-target_link_libraries(swiftagent_tools PUBLIC swiftagent_deps)
+target_link_libraries(swiftagent_tools PUBLIC swiftagent_deps swiftagent_core)
 
 add_executable(swiftagent src/main.cpp)
 target_link_libraries(swiftagent PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)
@@ -63,8 +64,10 @@ target_link_libraries(swiftagent PRIVATE swiftagent_core swiftagent_tools swifta
 add_library(swiftagent_llm STATIC
     src/llm/fake_provider.cpp
     src/llm/openai_provider.cpp
+    src/llm/provider_router.cpp
+    src/llm/retrying_provider.cpp
 )
-target_link_libraries(swiftagent_llm PUBLIC swiftagent_deps)
+target_link_libraries(swiftagent_llm PUBLIC swiftagent_deps swiftagent_core)
 
 add_executable(unit_tests
     tests/unit/test_main.cpp
