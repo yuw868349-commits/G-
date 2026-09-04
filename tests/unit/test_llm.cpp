@@ -87,9 +87,32 @@ TEST_CASE("retrying provider gives up after max_attempts") {
     CHECK(inner_ptr->calls_ == 3);
 }
 
+TEST_CASE("openai provider normalizes trailing /v1 in base url") {
+    // The canonical OpenAI base URL is "https://api.openai.com/v1".
+    // The provider must strip the trailing "/v1" so that the default
+    // path ("/chat/completions") is appended to the host and not to
+    // the versioned prefix.
+    OpenAIProvider p1{"https://api.openai.com/v1", "k", "gpt-4o-mini"};
+    CHECK(p1.base_url() == "https://api.openai.com");
+    CHECK(p1.path() == "/chat/completions");
+
+    OpenAIProvider p2{"https://api.openai.com/v1/", "k", "gpt-4o-mini"};
+    CHECK(p2.base_url() == "https://api.openai.com");
+
+    OpenAIProvider p3{"https://api.openai.com", "k", "gpt-4o-mini"};
+    CHECK(p3.base_url() == "https://api.openai.com");
+
+    // Callers that pass a custom path keep it verbatim and don't get
+    // a second "/v1" added behind their back.
+    OpenAIProvider p4{"https://api.openai.com/v1", "k", "gpt-4o-mini",
+                      "/v1/chat/completions"};
+    CHECK(p4.base_url() == "https://api.openai.com");
+    CHECK(p4.path() == "/v1/chat/completions");
+}
+
 TEST_CASE("openai provider parses chat completion response") {
     httplib::Server server;
-    server.Post("/v1/chat/completions", [](const httplib::Request&, httplib::Response& res) {
+    server.Post("/chat/completions", [](const httplib::Request&, httplib::Response& res) {
         res.set_content(
             R"({"choices":[{"message":{"role":"assistant","content":"serve","tool_calls":[]}}],"usage":{"prompt_tokens":10,"completion_tokens":2}})",
             "application/json");

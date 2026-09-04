@@ -18,6 +18,8 @@ public:
     explicit ReadFileTool(std::shared_ptr<ToolContext> ctx);
     ToolDescriptor descriptor() const override;
     ToolResult invoke(const ToolCall& call, ToolContext& ctx) override;
+    [[nodiscard]] std::vector<std::string>
+    resources_for(const ToolCall& call) const override;
 
 private:
     std::shared_ptr<ToolContext> ctx_;
@@ -28,6 +30,8 @@ public:
     explicit WriteFileTool(std::shared_ptr<ToolContext> ctx);
     ToolDescriptor descriptor() const override;
     ToolResult invoke(const ToolCall& call, ToolContext& ctx) override;
+    [[nodiscard]] std::vector<std::string>
+    resources_for(const ToolCall& call) const override;
 
 private:
     std::shared_ptr<ToolContext> ctx_;

@@ -36,3 +36,32 @@ TEST_CASE("dependency graph groups weakly connected components") {
     auto comps = graph.weakly_connected_components();
     CHECK(comps.size() == 2);
 }
+
+TEST_CASE("dependency graph: write/read to same path conflict even across tools") {
+    // This is the regression case the v0.1.0 review flagged: the
+    // previous executor built keys from `tool_type + tool_name`, so a
+    // write_file("a") and a read_file("a") were considered conflict-
+    // free and ran in parallel, racing the write.  The fixed
+    // resources_for() returns keys that include the address and a
+    // write claims both a "write" and an implicit "read" of the same
+    // path, so the two now go in different groups.
+    DependencyGraph graph;
+    ToolCall w{"write_file", R"({"path":"shared.txt"})", 0};
+    ToolCall r{"read_file", R"({"path":"shared.txt"})", 1};
+    graph.add_call(w, {"file:read:shared.txt", "file:write:shared.txt"});
+    graph.add_call(r, {"file:read:shared.txt"});
+    CHECK(graph.has_conflict(0, 1));
+    auto groups = graph.schedule();
+    CHECK(groups.size() == 2);
+}
+
+TEST_CASE("dependency graph: write/read to different paths run in parallel") {
+    DependencyGraph graph;
+    ToolCall w{"write_file", R"({"path":"a.txt"})", 0};
+    ToolCall r{"read_file", R"({"path":"b.txt"})", 1};
+    graph.add_call(w, {"file:read:a.txt", "file:write:a.txt"});
+    graph.add_call(r, {"file:read:b.txt"});
+    CHECK_FALSE(graph.has_conflict(0, 1));
+    auto groups = graph.schedule();
+    CHECK(groups.size() == 1);
+}

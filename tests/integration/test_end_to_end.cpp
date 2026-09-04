@@ -186,14 +186,17 @@ TEST_CASE("end-to-end read_file sees real on-disk content written by the agent")
 
 TEST_CASE("end-to-end shell tool runs commands and returns output") {
     // Smoke test the shell tool against a real process so that the
-    // BasicContext → popen() path is exercised end to end.
+    // BasicContext → exec_argv() path is exercised end to end.
     FakeProvider provider;
     provider.script({
         {{"plan", "run a command"},
          {"tool_calls", nlohmann::json::array({
              nlohmann::json{
                  {"name", "shell"},
-                 {"arguments", nlohmann::json{{"cmd", "printf hello-agent"}}}
+                 {"arguments", nlohmann::json{
+                     {"program", "printf"},
+                     {"args", nlohmann::json::array({"hello-agent"})}
+                 }}
              }
          })}},
         {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}
@@ -208,6 +211,43 @@ TEST_CASE("end-to-end shell tool runs commands and returns output") {
     auto result = orch.run("run a shell command", budget);
     REQUIRE(result.ok());
     CHECK(result.value().completed);
+}
+
+TEST_CASE("end-to-end shell tool does not interpret shell metacharacters") {
+    // Regression: the v0.1.0 shell tool passed arguments through a
+    // shell, so a string like "x; touch /tmp/pwned" would actually
+    // run `touch`.  The new tool uses execvp() and is passed
+    // arguments as separate argv entries; metacharacters in argv
+    // strings must NOT be interpreted as shell syntax.
+    namespace fs = std::filesystem;
+    auto target = fs::temp_directory_path() / "swiftagent_shell_inject_probe";
+    std::error_code ec;
+    fs::remove(target, ec);
+
+    FakeProvider provider;
+    provider.script({
+        {{"plan", "run a command"},
+         {"tool_calls", nlohmann::json::array({
+             nlohmann::json{
+                 {"name", "shell"},
+                 {"arguments", nlohmann::json{
+                     {"program", "echo"},
+                     {"args", nlohmann::json::array({std::string{"x; touch "} + target.string()})}
+                 }}
+             }
+         })}},
+        {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}
+    });
+    OrchestratorOptions options;
+    options.token_budget = 2048;
+    Orchestrator orch(provider, options);
+    orch.register_builtin();
+    Budget budget;
+    budget.max_turns = 4;
+    budget.active = true;
+    auto result = orch.run("metacharacter probe", budget);
+    REQUIRE(result.ok());
+    CHECK_FALSE(fs::exists(target));
 }
 
 TEST_CASE("end-to-end cache key is reused for repeat identical calls") {

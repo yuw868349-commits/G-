@@ -82,6 +82,7 @@ add_executable(unit_tests
     tests/unit/test_side_effect.cpp
     tests/unit/test_executor.cpp
     tests/unit/test_cache.cpp
+    tests/unit/test_platform.cpp
     tests/unit/test_replay.cpp
     tests/unit/test_telemetry.cpp
     tests/unit/test_orchestrator.cpp

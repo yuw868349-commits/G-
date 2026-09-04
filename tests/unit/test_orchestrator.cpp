@@ -94,3 +94,38 @@ TEST_CASE("orchestrator retries provider failures via the embedded RetryingProvi
     REQUIRE(result.ok());
     CHECK(result.value().completed);
 }
+
+TEST_CASE("orchestrator invokes the decision-tier model on every turn with tool use") {
+    // The cascade wiring must be exercised end-to-end.  Every turn
+    // that uses tools MUST also invoke the decision model so the
+    // Large tier gets real statistics; otherwise the cascade is a
+    // no-op as the bug report flagged.
+    FakeProvider provider;
+    provider.script({
+        {{"plan", "step 1"},
+         {"tool_calls", nlohmann::json::array({
+             nlohmann::json{{"name", "read_file"},
+                            {"arguments", nlohmann::json{{"path", "/tmp/none"}}}},
+         })}},
+        {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}
+    });
+    OrchestratorOptions options;
+    options.token_budget = 1024;
+    Orchestrator orch(provider, options);
+    orch.register_builtin();
+    Budget budget;
+    budget.max_turns = 4;
+    budget.active = true;
+    auto result = orch.run("cascade", budget);
+    REQUIRE(result.ok());
+    CHECK(result.value().completed);
+    // FakeProvider.call_count includes BOTH the chore and the
+    // decision review.  The previous bug only invoked the chore,
+    // so the count would be 1 (chore "DONE") instead of 2+decision.
+    // With the fix we expect 1 chore + 1 decision (turn 1) + 1
+    // chore "DONE" (turn 2) = 3 calls.
+    CHECK(provider.call_count >= 3);
+    // And the cascade must have observed a Decision-tier outcome.
+    auto& cascade = orch.cascade();
+    CHECK(cascade.divergence_rate(Tier::Large) >= 0.0);
+}

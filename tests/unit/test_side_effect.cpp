@@ -52,3 +52,27 @@ TEST_CASE("side effect observer reports removed files") {
     CHECK(changed.size() == 1);
     fs::remove_all(root);
 }
+
+TEST_CASE("side effect observer is incremental: unchanged files are not re-hashed") {
+    // After snapshotting a file, a second diff() against an
+    // unchanged tree must produce no changes.  This is the
+    // steady-state behaviour that keeps large directories cheap to
+    // watch: a no-op turn is a stat() per file, not a full read.
+    auto root = fs::temp_directory_path() / "swiftagent_side_effect_test_inc";
+    fs::remove_all(root);
+    fs::create_directories(root);
+    for (int i = 0; i < 20; ++i) {
+        write_file(root / ("f" + std::to_string(i) + ".txt"),
+                   std::string(1024, 'x'));
+    }
+    SideEffectObserver obs;
+    obs.snapshot(root);
+    auto changed = obs.diff(root);
+    CHECK(changed.empty());
+    // Now change one file: the diff should mention only that file.
+    write_file(root / "f5.txt", "different content");
+    changed = obs.diff(root);
+    CHECK(changed.size() == 1);
+    CHECK(changed[0].find("f5.txt") != std::string::npos);
+    fs::remove_all(root);
+}

@@ -1,8 +1,29 @@
 #include "core/registry.hpp"
+#include "tools/tool.hpp"
 
 #include <algorithm>
 
 namespace swiftagent {
+
+namespace {
+
+// Default implementation of `Tool::resources_for`: returns the
+// tool's statically-declared resources, which makes any two calls
+// of the same tool conflict in the dependency graph.  Tools that
+// touch concrete addresses (file paths, URLs) should override this.
+std::vector<std::string> default_resources_for(const Tool& tool,
+                                               const ToolCall& /*call*/) {
+    return tool.descriptor().declared_resources;
+}
+
+}  // namespace
+
+// Out-of-line definition of the virtual default so concrete tools
+// don't have to ship one.  The orchestrator pulls it in via
+// `Tool::resources_for` (virtual dispatch).
+std::vector<std::string> Tool::resources_for(const ToolCall& call) const {
+    return default_resources_for(*this, call);
+}
 
 void ToolRegistry::register_tool(std::unique_ptr<Tool> tool) {
     if (!tool) {

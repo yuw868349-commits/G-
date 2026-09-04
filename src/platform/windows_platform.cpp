@@ -17,6 +17,13 @@ class WindowsPlatform final : public Platform {
 public:
     ProcessResult run(const ProcessSpec& spec,
                       std::chrono::milliseconds timeout) override {
+        // The original implementation called blocking ReadFile in a
+        // loop and only checked the deadline *after* the call
+        // returned, so a child that produced no output would wedge
+        // the call forever.  Use overlapped I/O + WaitForSingleObject
+        // so the timeout can be observed even when the child is
+        // silent.  The process is terminated via TerminateProcess if
+        // the deadline is reached.
         std::string cmd = spec.command;
         for (const auto& a : spec.args) {
             cmd += " ";
@@ -47,23 +54,61 @@ public:
             return ProcessResult{-1, "", "create process failed", false};
         }
         CloseHandle(write_pipe);
+
         std::string out;
         char buf[4096];
-        DWORD read_bytes = 0;
+        HANDLE handles[2] = {pi.hProcess, read_pipe};
+        bool timed_out = false;
         auto deadline = std::chrono::steady_clock::now() + timeout;
-        while (true) {
-            if (std::chrono::steady_clock::now() >= deadline) {
-                TerminateProcess(pi.hProcess, 1);
-                CloseHandle(pi.hProcess);
-                CloseHandle(pi.hThread);
-                CloseHandle(read_pipe);
-                return ProcessResult{-1, out, "timeout", true};
-            }
-            if (!ReadFile(read_pipe, buf, sizeof(buf), &read_bytes, nullptr) ||
-                read_bytes == 0) {
+        for (;;) {
+            auto now = std::chrono::steady_clock::now();
+            if (now >= deadline) {
+                timed_out = true;
                 break;
             }
-            out.append(buf, read_bytes);
+            auto remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     deadline - now)
+                                     .count();
+            if (remaining_ms < 1) remaining_ms = 1;
+            DWORD wait = static_cast<DWORD>(remaining_ms);
+            DWORD which = WaitForMultipleObjects(2, handles, FALSE, wait);
+            if (which == WAIT_TIMEOUT) {
+                // Either the process or the pipe is silent; loop
+                // back to re-check the deadline.
+                continue;
+            }
+            if (which == WAIT_FAILED) {
+                break;
+            }
+            if (which == WAIT_OBJECT_0) {
+                // Process exited; drain remaining pipe data.
+                for (;;) {
+                    DWORD read_bytes = 0;
+                    if (!ReadFile(read_pipe, buf, sizeof(buf),
+                                  &read_bytes, nullptr) || read_bytes == 0) {
+                        break;
+                    }
+                    out.append(buf, read_bytes);
+                }
+                break;
+            }
+            if (which == WAIT_OBJECT_0 + 1) {
+                DWORD read_bytes = 0;
+                if (!ReadFile(read_pipe, buf, sizeof(buf),
+                              &read_bytes, nullptr) || read_bytes == 0) {
+                    // Pipe closed: process is exiting.
+                    continue;
+                }
+                out.append(buf, read_bytes);
+            }
+        }
+        if (timed_out) {
+            TerminateProcess(pi.hProcess, 1);
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            CloseHandle(pi.hProcess);
+            CloseHandle(pi.hThread);
+            CloseHandle(read_pipe);
+            return ProcessResult{-1, out, "timeout", true};
         }
         WaitForSingleObject(pi.hProcess, INFINITE);
         DWORD exit_code = 0;

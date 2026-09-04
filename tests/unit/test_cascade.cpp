@@ -24,3 +24,16 @@ TEST_CASE("governor pins chores to large tier after repeated failures") {
     cascade.record_failure(Tier::Small, Role::Chore);
     CHECK(cascade.route_for(Role::Chore) == Tier::Large);
 }
+
+TEST_CASE("decision tier routes to large by default and is observable") {
+    // The Decision role MUST be routed to the Large tier so that
+    // model cascading exercises a real provider distinction, not a
+    // no-op.  The orchestrator then observes the outcome and feeds
+    // it back into the cascade's per-role statistics.
+    ModelCascade cascade;
+    CHECK(cascade.route_for(Role::Decision) == Tier::Large);
+    cascade.record_outcome(Tier::Large, Role::Decision, true);
+    cascade.record_outcome(Tier::Large, Role::Decision, false);
+    CHECK(cascade.divergence_rate(Tier::Large) == 0.5);
+    CHECK(cascade.divergence_rate(Tier::Large) == 0.5);
+}

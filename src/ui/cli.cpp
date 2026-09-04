@@ -41,6 +41,12 @@ CliOptions parse_cli(int argc, char** argv) {
             opts.use_web = true;
         } else if (arg == "--port" && i + 1 < argc) {
             opts.web_port = std::stoi(argv[++i]);
+        } else if (arg == "--web-host" && i + 1 < argc) {
+            opts.web_host = argv[++i];
+        } else if (arg == "--web-user" && i + 1 < argc) {
+            opts.web_user = argv[++i];
+        } else if (arg == "--web-pass" && i + 1 < argc) {
+            opts.web_pass = argv[++i];
         } else if (arg == "--verbose" || arg == "-v") {
             opts.verbose = true;
         } else if (arg == "--help" || arg == "-h") {
@@ -51,7 +57,10 @@ CliOptions parse_cli(int argc, char** argv) {
                       << "  --api-base URL    API base URL\n"
                       << "  --budget N        max turns (default 32)\n"
                       << "  --web             run web panel\n"
-                      << "  --port N          web port (default 8080)\n";
+                      << "  --port N          web port (default 8080)\n"
+                      << "  --web-host ADDR   bind address (default 127.0.0.1)\n"
+                      << "  --web-user USER   basic-auth user (optional)\n"
+                      << "  --web-pass PASS   basic-auth password (optional)\n";
             std::exit(0);
         } else if (arg[0] != '-') {
             if (!opts.task.empty()) {

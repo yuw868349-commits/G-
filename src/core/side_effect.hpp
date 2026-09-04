@@ -26,6 +26,10 @@ public:
     [[nodiscard]] std::optional<std::string> hash_of(const std::string& path) const;
 
 private:
+    // hash_file() reads the entire contents of `path` and computes
+    // an FNV-1a digest.  It is the only operation that touches a
+    // file's bytes; everything else compares (mtime, size) and uses
+    // the cached digest from a previous observation.
     [[nodiscard]] static std::string hash_file(const std::filesystem::path& path);
     [[nodiscard]] static std::vector<std::filesystem::path> walk(const std::filesystem::path& root);
 

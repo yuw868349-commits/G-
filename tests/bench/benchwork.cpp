@@ -52,7 +52,8 @@ nlohmann::json script_install(std::size_t n) {
     for (std::size_t i = 0; i < n; ++i) {
         calls.push_back({
             {"name", "shell"},
-            {"arguments", {{"cmd", "sleep 0.005"}}}
+            {"arguments", {{"program", "sleep"},
+                            {"args", nlohmann::json::array({"0.005"})}}}
         });
     }
     return {
@@ -72,19 +73,9 @@ public:
         ss << in.rdbuf();
         return ss.str();
     }
-    std::string exec(const std::string& cmd) override {
-        std::string full = cmd + " 2>&1";
-        FILE* pipe = ::popen(full.c_str(), "r");
-        if (!pipe) {
-            return "";
-        }
-        char buf[1024];
-        std::string out;
-        while (std::fgets(buf, sizeof(buf), pipe)) {
-            out += buf;
-        }
-        ::pclose(pipe);
-        return out;
+    std::string exec(const std::string& /*cmd*/) override {
+        // No shell fallback in tests; the bench shell tool uses argv.
+        return "";
     }
     bool file_exists(const std::string& path) const override {
         return std::filesystem::exists(path);

@@ -5,8 +5,32 @@
 
 namespace swiftagent {
 
-OpenAIProvider::OpenAIProvider(std::string base_url, std::string api_key, std::string model, std::string path)
-    : base_url_(std::move(base_url)),
+namespace {
+
+// Trim any trailing slashes so we can compare against "/v1" without
+// worrying about whether the user added an extra one.
+std::string rtrim_slashes(const std::string& s) {
+    std::size_t end = s.size();
+    while (end > 0 && s[end - 1] == '/') {
+        --end;
+    }
+    return s.substr(0, end);
+}
+
+}  // namespace
+
+std::string OpenAIProvider::strip_trailing_v1(std::string url) {
+    auto trimmed = rtrim_slashes(url);
+    if (trimmed.size() >= 3 &&
+        trimmed.compare(trimmed.size() - 3, 3, "/v1") == 0) {
+        return rtrim_slashes(trimmed.substr(0, trimmed.size() - 3));
+    }
+    return url;
+}
+
+OpenAIProvider::OpenAIProvider(std::string base_url, std::string api_key,
+                               std::string model, std::string path)
+    : base_url_(strip_trailing_v1(std::move(base_url))),
       api_key_(std::move(api_key)),
       model_(std::move(model)),
       path_(std::move(path)),

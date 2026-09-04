@@ -27,3 +27,21 @@ TEST_CASE("cache refuses to return non-cacheable entries") {
     auto miss = cache.get("k1", {});
     CHECK_FALSE(miss.has_value());
 }
+
+TEST_CASE("cache tracks per-key hit counts without mutating the entry") {
+    Cache cache;
+    cache.put("k1", nlohmann::json{{"v", 1}}, {"a"});
+    cache.put("k2", nlohmann::json{{"v", 2}}, {"b"});
+    cache.get("k1", {"a"});
+    cache.get("k1", {"a"});
+    cache.get("k2", {"b"});
+    CHECK(cache.hits_for("k1") == 2);
+    CHECK(cache.hits_for("k2") == 1);
+    CHECK(cache.hits_for("k3") == 0);
+    // The entry itself should still be const-friendly; we test that
+    // get() is callable on a const reference.
+    const Cache& cref = cache;
+    auto v = cref.get("k1", {"a"});
+    REQUIRE(v.has_value());
+    CHECK((*v)["v"] == 1);
+}

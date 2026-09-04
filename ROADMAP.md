@@ -5,7 +5,7 @@
 ## 短期（v0.2）
 
 - 真实 LLM 联调：用真 OpenAI 兼容端点跑通整条链路，录一段端到端示例
-- Windows 平台层 CI 真跑通：现在只编，没在 runner 上跑过
+- Windows 平台层 CI 真跑通：已在 windows-latest 矩阵里 build+ctest，平台抽象已对齐
 - MCP SSE transport 接一个真 SSE 服务端做联调
 - 把 codecov 接上 CI，README 加覆盖率徽章
 - 单元测试覆盖到 80% 以上

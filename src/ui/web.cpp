@@ -4,6 +4,7 @@
 #include <iostream>
 #include <mutex>
 #include <sstream>
+#include <string>
 #include <thread>
 
 #include "core/orchestrator.hpp"
@@ -24,6 +25,37 @@ public:
     std::stringstream stream;
     std::mutex mtx_;
 };
+
+// Decode a single base64 character to its 6-bit value.  Returns
+// 0xff for an invalid character.
+unsigned char b64_value(char c) {
+    if (c >= 'A' && c <= 'Z') return static_cast<unsigned char>(c - 'A');
+    if (c >= 'a' && c <= 'z') return static_cast<unsigned char>(26 + c - 'a');
+    if (c >= '0' && c <= '9') return static_cast<unsigned char>(52 + c - '0');
+    if (c == '+') return 62;
+    if (c == '/') return 63;
+    return 0xff;
+}
+
+// Decode a base64 string.  Used for HTTP basic-auth credentials.
+std::string b64_decode(const std::string& in) {
+    std::string out;
+    out.reserve(in.size() * 3 / 4);
+    int bits = 0;
+    unsigned int buf = 0;
+    for (char c : in) {
+        if (c == '=' || c == '\r' || c == '\n' || c == ' ') continue;
+        auto v = b64_value(c);
+        if (v == 0xff) return {};
+        buf = (buf << 6) | v;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            out.push_back(static_cast<char>((buf >> bits) & 0xff));
+        }
+    }
+    return out;
+}
 
 std::string index_html() {
     return R"HTML(<!doctype html>
@@ -91,11 +123,53 @@ std::string index_html() {
 } // namespace
 
 int run_web(const CliOptions& opts) {
+    // The shell tool can execute arbitrary programs on the host, so
+    // the web panel must not be a public service by default.  Default
+    // to loopback; operators that intentionally want to expose the
+    // panel to the network must pass --web-host explicitly.
+    const std::string& host = opts.web_host;
+    const bool require_auth = !opts.web_user.empty() && !opts.web_pass.empty();
+
     httplib::Server server;
-    server.Get("/", [](const httplib::Request&, httplib::Response& res) {
+
+    // Reject requests that don't carry valid basic-auth credentials
+    // when one has been configured.  This is *additional* defence on
+    // top of binding to loopback; a misconfigured operator who
+    // exposes the panel publicly still needs to set credentials.
+    auto check_auth = [require_auth, &opts](const httplib::Request& req) -> bool {
+        if (!require_auth) return true;
+        auto it = req.headers.find("Authorization");
+        if (it == req.headers.end()) return false;
+        const std::string& value = it->second;
+        const std::string prefix = "Basic ";
+        if (value.size() <= prefix.size() ||
+            value.compare(0, prefix.size(), prefix) != 0) {
+            return false;
+        }
+        auto decoded = b64_decode(value.substr(prefix.size()));
+        auto colon = decoded.find(':');
+        if (colon == std::string::npos) return false;
+        auto user = decoded.substr(0, colon);
+        auto pass = decoded.substr(colon + 1);
+        return user == opts.web_user && pass == opts.web_pass;
+    };
+
+    server.Get("/", [check_auth](const httplib::Request& req, httplib::Response& res) {
+        if (!check_auth(req)) {
+            res.status = 401;
+            res.set_header("WWW-Authenticate", "Basic realm=\"swiftagent\"");
+            res.set_content("authentication required", "text/plain");
+            return;
+        }
         res.set_content(index_html(), "text/html");
     });
-    server.Post("/run", [opts](const httplib::Request& req, httplib::Response& res) {
+    server.Post("/run", [opts, check_auth](const httplib::Request& req, httplib::Response& res) {
+        if (!check_auth(req)) {
+            res.status = 401;
+            res.set_header("WWW-Authenticate", "Basic realm=\"swiftagent\"");
+            res.set_content("authentication required", "text/plain");
+            return;
+        }
         auto body = nlohmann::json::parse(req.body, nullptr, false);
         if (body.is_discarded() || !body.is_object()) {
             res.status = 400;
@@ -132,8 +206,16 @@ int run_web(const CliOptions& opts) {
         out["events"] = sink->stream.str();
         res.set_content(out.dump(), "application/json");
     });
-    std::cout << "swiftagent web panel listening on http://0.0.0.0:" << opts.web_port << "\n";
-    return server.listen("0.0.0.0", opts.web_port) ? 0 : 1;
+    if (host == "0.0.0.0" || host.empty() || host == "::") {
+        std::cerr << "warning: web panel bound to '" << host
+                  << "' exposes the shell tool to the network. "
+                  << "Pass --web-user/--web-pass or bind to 127.0.0.1.\n";
+    }
+    std::cout << "swiftagent web panel listening on http://" << host
+              << ":" << opts.web_port
+              << (require_auth ? " (basic-auth required)" : "")
+              << "\n";
+    return server.listen(host, opts.web_port) ? 0 : 1;
 }
 
 } // namespace swiftagent

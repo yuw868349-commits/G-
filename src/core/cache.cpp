@@ -46,7 +46,7 @@ void Cache::put(const std::string& key, const nlohmann::json& value,
         }
         return;
     }
-    CacheEntry entry{key, value, dependencies, {}, 0, cacheable};
+    CacheEntry entry{key, value, dependencies, {}, cacheable};
     for (const auto& d : dependencies) {
         auto v = dep_versions_.find(d);
         if (v == dep_versions_.end()) {
@@ -72,8 +72,17 @@ Cache::get(const std::string& key, const std::vector<std::string>& current) cons
         return std::nullopt;
     }
     ++hits_;
-    ++const_cast<std::uint64_t&>(it->second.hit_count);
+    ++hits_per_key_[key];
     return it->second.value;
+}
+
+std::size_t Cache::hits_for(const std::string& key) const {
+    std::lock_guard<std::mutex> lock(mtx_);
+    auto it = hits_per_key_.find(key);
+    if (it == hits_per_key_.end()) {
+        return 0;
+    }
+    return it->second;
 }
 
 void Cache::invalidate_dependency(const std::string& dep) {

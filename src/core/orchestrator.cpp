@@ -270,13 +270,72 @@ Result<RunResult> Orchestrator::run(const std::string& task,
         auto calls = extract_tool_calls(resp.raw);
         replay_.record(EventKind::ToolCalled, {{"count", calls.size()}});
 
-        // Run the model once more for the *decision* role, but only to
-        // commit a routing observation. The response itself is not used
-        // because the chore response already carries the plan; the
-        // decision call is a placeholder for downstream prompts that
-        // need explicit decision-tier context (recorded as telemetry).
-        observe_outcome(cascade_.route_for(Role::Decision), Role::Decision,
-                        Result<ModelResponse>::ok(resp));
+        // The Decision-tier model is invoked independently of the
+        // Chore-tier model so that the cascade routing is real, not
+        // cosmetic.  We ask the decision model to review the chore
+        // response and either confirm or override the plan.  The
+        // decision model is expected to be larger and more accurate
+        // (e.g. GPT-4 vs GPT-4-mini) and is what gets recorded under
+        // the Decision role in the cascade statistics.  If the
+        // decision model rejects the chore plan, the override is
+        // surfaced back into the model stream for the next turn.
+        Messages decision_messages = messages;
+        decision_messages.push_back(Message{
+            "user",
+            "Decision review: the chore-tier model proposed the plan '"
+                + trim_for_log(resp.outcome.plan)
+                + "' with "
+                + std::to_string(calls.size())
+                + " tool calls. Reply with either 'CONFIRM' to keep the "
+                  "plan, or 'OVERRIDE: <new plan>' to change it. Empty plan "
+                  "is treated as an override to halt tool use.",
+            std::nullopt});
+        Tier decision_tier = cascade_.route_for(Role::Decision);
+        auto decision_response = complete_for(Role::Decision, decision_messages);
+        observe_outcome(decision_tier, Role::Decision, decision_response);
+        if (decision_response.ok()) {
+            const auto& dplan = decision_response.value().outcome.plan;
+            // Only count the decision model as a divergence when it
+            // actively *rejects* the chore plan.  "CONFIRM" and an
+            // empty plan are both treated as agreement.  An override
+            // is recorded as a divergence and stored on the cascade.
+            if (!dplan.empty() && dplan != "CONFIRM" &&
+                dplan.rfind("OVERRIDE:", 0) == 0) {
+                std::string override_plan = dplan.substr(std::string("OVERRIDE:").size());
+                while (!override_plan.empty() &&
+                       (override_plan.front() == ' ' ||
+                        override_plan.front() == '\t')) {
+                    override_plan.erase(override_plan.begin());
+                }
+                replay_.record(EventKind::Degraded,
+                               {{"decision_override", override_plan}});
+                cascade_.record_outcome(decision_tier, Role::Decision, true);
+                // The override is fed back to the model: the chore's
+                // proposed tools are dropped, and the next turn
+                // starts with the override plan as the model input.
+                if (calls.empty()) {
+                    // No tool calls to drop, but the override is the
+                    // final answer.  End the run.
+                    result.completed = true;
+                    result.final_output = override_plan;
+                    replay_.record(EventKind::TaskEnded, {{"turn", turn}});
+                    telemetry_.set_wall_clock_ms(
+                        std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now() - wall_start).count());
+                    return Result<RunResult>::ok(std::move(result));
+                }
+                // Otherwise drop the tool calls and let the chore
+                // model re-plan on the next turn.
+                calls.clear();
+                resp.outcome.has_tool_use = false;
+                resp.outcome.plan = override_plan;
+            }
+        } else {
+            // The decision model itself failed: the chore plan
+            // stands, but the failure is recorded so the cascade
+            // can escalate to a different tier next time.
+            cascade_.record_failure(decision_tier, Role::Decision);
+        }
 
         TurnContext turn_ctx;
         turn_ctx.goal = task;
