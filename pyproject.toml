@@ -5,7 +5,7 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "swiftagent"
 version = "0.1.0"
-description = "High-performance agent execution engine."
+description = "C++23 agent execution engine with MCP, Python SDK, CLI, and Web panel."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
