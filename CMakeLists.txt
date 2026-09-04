@@ -11,7 +11,7 @@ include(cmake/CompilerWarnings.cmake)
 enable_testing()
 
 add_library(swiftagent_core INTERFACE)
-target_link_libraries(swiftagent_core INTERFACE nlohmann_json::nlohmann_json)
+target_link_libraries(swiftagent_core INTERFACE nlohmann_json::nlohmann_json httplib::httplib)
 target_include_directories(swiftagent_core INTERFACE src)
 swiftagent_target_warnings(swiftagent_core)
 
@@ -20,6 +20,7 @@ target_link_libraries(swiftagent PRIVATE swiftagent_core)
 
 add_library(swiftagent_llm STATIC
     src/llm/fake_provider.cpp
+    src/llm/openai_provider.cpp
 )
 target_link_libraries(swiftagent_llm PUBLIC swiftagent_core)
 
