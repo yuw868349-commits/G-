@@ -18,7 +18,11 @@ nlohmann::json parse(const std::string& data) {
 
 } // namespace
 
-JsonRpcClient::JsonRpcClient(JsonRpcTransport& transport) : transport_(transport) {}
+JsonRpcClient::JsonRpcClient(JsonRpcTransport& transport)
+    : transport_(transport) {}
+
+JsonRpcClient::JsonRpcClient(std::shared_ptr<JsonRpcTransport> transport)
+    : owned_(std::move(transport)), transport_(*owned_) {}
 
 nlohmann::json JsonRpcClient::call(const std::string& method, const nlohmann::json& params) {
     auto id = next_id_++;

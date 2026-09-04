@@ -35,6 +35,10 @@ public:
     using Handler = std::function<nlohmann::json(const nlohmann::json& params)>;
 
     explicit JsonRpcClient(JsonRpcTransport& transport);
+    // Owning constructor: the client takes shared ownership of the
+    // transport and is responsible for keeping it alive as long as
+    // pending requests might still need it.
+    explicit JsonRpcClient(std::shared_ptr<JsonRpcTransport> transport);
 
     [[nodiscard]] nlohmann::json call(const std::string& method,
                                        const nlohmann::json& params = nlohmann::json::object());
@@ -44,6 +48,7 @@ public:
     void close();
 
 private:
+    std::shared_ptr<JsonRpcTransport> owned_;
     JsonRpcTransport& transport_;
     std::int64_t next_id_{1};
     std::unordered_map<std::string, Handler> handlers_;
