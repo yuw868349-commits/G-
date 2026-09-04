@@ -20,7 +20,9 @@ target_link_libraries(swiftagent PRIVATE swiftagent_core)
 add_executable(unit_tests
     tests/unit/test_main.cpp
     tests/unit/test_skeleton.cpp
+    tests/unit/test_core_types.cpp
 )
+target_include_directories(unit_tests PRIVATE src)
 target_compile_features(unit_tests PRIVATE cxx_std_23)
 target_link_libraries(unit_tests PRIVATE Catch2::Catch2WithMain swiftagent_core)
 
