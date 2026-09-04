@@ -27,6 +27,8 @@ C++23 写的 agent 执行引擎。能跑 plan-act-reflect 的多轮任务，自�
 - 5 个可跑示例（`examples/cpp/`）
 - Doxygen 文档（`Doxyfile`）
 - CI：三平台编译 + ctest + Python + ASan + UBSan + TSan + 覆盖率 + 格式检查
+- Docker 多阶段镜像（CLI / wheel / dev）
+- 包配方：deb / rpm / homebrew / winget
 
 ## 架构
 
@@ -150,6 +152,38 @@ open docs/doxygen/html/index.html
 ```
 
 CI 每次提交都跑一遍，把 HTML 当 artifact 上传。
+
+## Docker
+
+```bash
+docker build -t swiftagent:dev -f docker/Dockerfile.cli .
+docker run --rm swiftagent:dev --help
+```
+
+开发镜像（带工具链、Python、例子、测试）：
+
+```bash
+docker build -t swiftagent:dev-full -f docker/Dockerfile.dev .
+docker run --rm -it swiftagent:dev-full bash
+```
+
+Python 打包：
+
+```bash
+docker build -t swiftagent:wheel -f docker/Dockerfile.wheel .
+```
+
+## 包管理器
+
+配方放在 `packaging/`：
+- `deb/build.sh`：用 cmake + dpkg-deb 生成 `.deb`
+- `rpm/swiftagent.spec`：Fedora / RHEL spec
+- `homebrew/swiftagent.rb`：macOS Homebrew formula
+- `winget/swiftagent.yaml`：Windows 包管理器清单
+
+## 引用
+
+学术工作用的话用 [CITATION.cff](CITATION.cff) 里的元数据，GitHub 会显示 "Cite this repository" 按钮。
 
 ## 贡献
 

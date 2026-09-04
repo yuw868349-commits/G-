@@ -1,0 +1,34 @@
+name: swiftagent
+description: C++23 agent execution engine with MCP, Python SDK, CLI, and Web panel
+license: MIT
+
+cff-version: 1.2.0
+message: |
+  If you use SwiftAgent in academic work, please cite it using the
+  metadata below.
+type: software
+title: SwiftAgent
+version: 0.1.0
+date-released: 2026-09-04
+url: https://github.com/yuw868349-commits/G-
+repository-code: https://github.com/yuw868349-commits/G-
+repository: https://github.com/yuw868349-commits/G-
+keywords:
+  - agent
+  - llm
+  - tool-use
+  - mcp
+  - cpp
+  - python
+license: MIT
+authors:
+  - name: SwiftAgent Contributors
+    alias: yuw868349-commits
+    affiliation: SwiftAgent Project
+contact:
+  - name: SwiftAgent Issues
+    url: https://github.com/yuw868349-commits/G-/issues
+references:
+  - type: software
+    title: Model Context Protocol specification
+    url: https://modelcontextprotocol.io/

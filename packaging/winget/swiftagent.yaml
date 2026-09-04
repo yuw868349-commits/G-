@@ -1,0 +1,20 @@
+name: "SwiftAgent"
+tap-name: "swiftagent"
+homepage: "https://github.com/yuw868349-commits/G-"
+description: "C++23 agent execution engine with MCP, Python SDK, CLI, and Web panel"
+license: "MIT"
+versions:
+  - version: "0.1.0"
+    url: "https://github.com/yuw868349-commits/G-/archive/refs/tags/v0.1.0.tar.gz"
+    sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    build-system: "cmake"
+    build-options:
+      - "release"
+    provides:
+      - "swiftagent=0.1.0"
+    summary: "SwiftAgent: agent execution engine"
+description: |
+  SwiftAgent runs plan-act-reflect multi-turn tasks with a built-in
+  context manager, tool executor, cache, replay, and telemetry. It
+  speaks MCP (stdio + SSE) to attach external tools and ships with
+  a Python SDK (pybind11).
