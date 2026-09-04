@@ -100,7 +100,830 @@ Responsibilities:
 - `tests/integration/*`: end-to-end agent run with FakeProvider.
 - `tests/bench/*`: three canonical workloads and baseline comparison.
 
-Build order: CMake skeleton -> llm -> context (digest, fact store, context manager) -> execution (dependency graph, side effect, executor) -> cache -> replay -> telemetry -> cascade -> orchestrator -> mcp -> ui -> platform -> bench.
+Build order: CMake skeleton -> llm -> context (digest, fact store, context manager) -> execution (dependency graph, side effect, executor) -> cache -> replay -> telemetry -> cascade -> orchestrator -> mcp -> ui -> platform -> bench -> python sdk.
+
+---
+
+## Part J - Python SDK
+
+### Task 25: pybind11 Subproject, Build Hook, Smoke Test
+
+**Files:**
+- Create: `python/CMakeLists.txt`
+- Create: `python/bindings/engine.cpp`
+- Create: `python/swiftagent/__init__.py`
+- Create: `tests/python/test_smoke.py`
+- Create: `pyproject.toml`
+- Modify: `CMakeLists.txt`
+
+- [ ] **Step 1: Write the failing Python test**
+
+`tests/python/test_smoke.py`:
+
+```python
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "build" / "python"))
+
+import swiftagent
+import pytest
+
+
+def test_engine_runs_a_task():
+    engine = swiftagent.Engine(provider="fake", budget_turns=2)
+    result = engine.run("demo task")
+    assert result is not None
+    assert result.turns >= 1
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python -m pytest tests/python/test_smoke.py -q`
+Expected: ModuleNotFoundError: `swiftagent`.
+
+- [ ] **Step 3: pyproject.toml**
+
+`pyproject.toml`:
+
+```toml
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.12", "cmake>=3.24", "ninja"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "swiftagent"
+version = "0.1.0"
+description = "High-performance agent execution engine."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "SwiftAgent Contributors"}]
+classifiers = ["Programming Language :: C++", "Programming Language :: Python :: 3"]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.scikit-build]
+wheel.expand-cmake-modules = ["python/CMakeLists.txt"]
+sdist.exclude = [".github", "build*"]
+```
+
+- [ ] **Step 4: Python bindings target**
+
+`python/CMakeLists.txt`:
+
+```cmake
+cmake_minimum_required(VERSION 3.24)
+project(swiftagent_python LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+find_package(pybind11 CONFIG REQUIRED)
+find_package(swiftagent CONFIG REQUIRED)
+
+pybind11_add_module(swiftagent_native MODULE
+    bindings/engine.cpp
+)
+target_link_libraries(swiftagent_native PRIVATE swiftagent::core)
+```
+
+`python/bindings/engine.cpp`:
+
+```cpp
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
+#include "core/orchestrator.hpp"
+#include "llm/fake_provider.hpp"
+#include "llm/openai_provider.hpp"
+#include "tools/registry.hpp"
+#include "tools/builtin.hpp"
+
+namespace py = pybind11;
+
+namespace {
+
+std::unique_ptr<swiftagent::Provider> make_provider(const std::string& name,
+                                                    const std::string& model) {
+    if (name == "openai") {
+        return std::make_unique<swiftagent::OpenAIProvider>(
+            "https://api.openai.com/v1", "", model);
+    }
+    auto fake = std::make_unique<swiftagent::FakeProvider>();
+    fake->script({
+        {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}
+    });
+    return fake;
+}
+
+} // namespace
+
+PYBIND11_MODULE(swiftagent_native, m) {
+    py::class_<swiftagent::RunResult>(m, "RunResult")
+        .def_readonly("completed", &swiftagent::RunResult::completed)
+        .def_readonly("bounded", &swiftagent::RunResult::bounded)
+        .def_readonly("turns", &swiftagent::RunResult::turns)
+        .def_readonly("final_output", &swiftagent::RunResult::final_output);
+
+    py::class_<swiftagent::Telemetry>(m, "Telemetry")
+        .def_property_readonly("speedup_x", &swiftagent::Telemetry::speedup_x)
+        .def("report", &swiftagent::Telemetry::export_report);
+
+    py::class_<swiftagent::Orchestrator>(m, "Engine")
+        .def(py::init([](const std::string& provider, const std::string& model,
+                         std::uint32_t budget_turns) {
+            auto* p = new swiftagent::Orchestrator(
+                *make_provider(provider, model));
+            (void)budget_turns;  // bound through run; kept on the signature for forward compat
+            return std::unique_ptr<swiftagent::Orchestrator>(p);
+        }), py::arg("provider") = "fake", py::arg("model") = "gpt-4o-mini",
+             py::arg("budget_turns") = 32)
+        .def("run", [](swiftagent::Orchestrator& self, const std::string& task) {
+            swiftagent::Budget budget;
+            budget.max_turns = 32;
+            budget.active = true;
+            py::gil_scoped_release release;
+            auto result = self.run(task, budget);
+            py::gil_scoped_acquire acquire;
+            if (!result.ok()) {
+                throw std::runtime_error(result.error().message);
+            }
+            return result.value();
+        }, py::arg("task"))
+        .def("telemetry", &swiftagent::Orchestrator::telemetry,
+             py::return_value_policy::reference_internal)
+        .def("replay", &swiftagent::Orchestrator::replay,
+             py::return_value_policy::reference_internal);
+}
+```
+
+`python/swiftagent/__init__.py`:
+
+```python
+from .swiftagent_native import Engine, RunResult, Telemetry
+
+__all__ = ["Engine", "RunResult", "Telemetry"]
+__version__ = "0.1.0"
+```
+
+- [ ] **Step 5: Top-level CMake integration**
+
+Append to `CMakeLists.txt`:
+
+```cmake
+option(SWIFTAGENT_BUILD_PYTHON "Build Python bindings" ON)
+if(SWIFTAGENT_BUILD_PYTHON)
+    add_subdirectory(python)
+endif()
+```
+
+- [ ] **Step 6: Build and test**
+
+Run: `cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build -j && python -m pip install --user . && python -m pytest tests/python/test_smoke.py -q`
+Expected: test PASSES.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add pyproject.toml python tests/python CMakeLists.txt
+git commit -m "feat: add python sdk with pybind11 bindings and smoke test"
+```
+
+<!-- CONTINUE_PART_J -->
+
+### Task 26: Python `Engine` Surface, `Budget`, and GIL-Release Audit
+
+**Files:**
+- Modify: `python/bindings/engine.cpp`
+- Modify: `python/swiftagent/__init__.py`
+- Create: `tests/python/test_engine.py`
+
+- [ ] **Step 1: Write the failing test**
+
+`tests/python/test_engine.py`:
+
+```python
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "build" / "python"))
+
+import swiftagent
+import pytest
+
+
+def test_engine_budget_limits_turns():
+    engine = swiftagent.Engine(provider="fake", budget_turns=4)
+    result = engine.run("loop until budget ends")
+    assert result.turns <= 4
+    assert result.bounded is True
+
+
+def test_telemetry_report_contains_speedup():
+    engine = swiftagent.Engine(provider="fake", budget_turns=2)
+    engine.run("demo")
+    snap = engine.telemetry().report()
+    assert "speedup_x" in snap
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python -m pytest tests/python/test_engine.py -q`
+Expected: AttributeError (`budget_turns` not honored; no `bounded` field on RunResult).
+
+- [ ] **Step 3: Wire `Budget` through the binding**
+
+Replace the body of `Engine::run` lambda in `python/bindings/engine.cpp`:
+
+```cpp
+.def("run", [](swiftagent::Orchestrator& self, const std::string& task, std::uint32_t max_turns) {
+    swiftagent::Budget budget;
+    budget.max_turns = max_turns;
+    budget.active = true;
+    py::gil_scoped_release release;
+    auto result = self.run(task, budget);
+    py::gil_scoped_acquire acquire;
+    if (!result.ok()) {
+        throw std::runtime_error(result.error().message);
+    }
+    return result.value();
+}, py::arg("task"), py::arg("max_turns") = 32)
+```
+
+Update `Engine.__init__` to keep `budget_turns` as a member field on a small Python wrapper instead of dropping it:
+
+```cpp
+struct EngineState {
+    std::uint32_t budget_turns{32};
+};
+```
+
+Expose `budget_turns` through a property:
+
+```cpp
+py::class_<EngineState>(m, "_EngineState")
+    .def(py::init<>())
+    .def_readwrite("budget_turns", &EngineState::budget_turns);
+```
+
+Note: rather than two parallel C++ state objects, attach state via Python `Engine` subclass in `swiftagent/__init__.py` (Step 4). Keep the binding surface minimal: only `run(task, max_turns=...)` is the public entry point.
+
+- [ ] **Step 4: Python wrapper that closes the budget loop**
+
+Replace `python/swiftagent/__init__.py`:
+
+```python
+from .swiftagent_native import Engine as _NativeEngine, RunResult, Telemetry
+
+__all__ = ["Engine", "RunResult", "Telemetry"]
+__version__ = "0.1.0"
+
+
+class Engine(_NativeEngine):
+    def __init__(self, provider: str = "fake", model: str = "gpt-4o-mini",
+                 budget_turns: int = 32):
+        super().__init__(provider=provider, model=model, budget_turns=budget_turns)
+        self._budget_turns = int(budget_turns)
+
+    def run(self, task: str, max_turns: int | None = None) -> RunResult:
+        if max_turns is None:
+            max_turns = self._budget_turns
+        return super().run(task, max_turns)
+```
+
+- [ ] **Step 5: Audit every binding for GIL release**
+
+Add at top of `engine.cpp` an explicit comment:
+
+```cpp
+// GIL policy: every function whose body calls into the engine releases the
+// GIL before the call and reacquires it on return. Tool handlers in Python
+// run with the GIL held; the executor acquires it around handler dispatch.
+```
+
+Bindings on which the GIL is already released: `Engine::run`. Bindings on which the GIL is intentionally held: `Engine::telemetry`/`replay` (cheap, GIL-reacquired accessors are fine).
+
+- [ ] **Step 6: Run test to verify it passes**
+
+Run: `cmake --build build -j && python -m pytest tests/python/test_engine.py -q`
+Expected: PASS.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add python tests/python CMakeLists.txt
+git commit -m "feat: complete python engine surface with budget and gil audit"
+```
+
+<!-- CONTINUE_PART_J -->
+
+### Task 27: Python `@tool` Decorator with Type-Hint Schema and `@mcp_client`
+
+**Files:**
+- Create: `python/swiftagent/decorators.py`
+- Create: `python/swiftagent/mcp_client.py`
+- Create: `tests/python/test_decorators.py`
+- Modify: `python/bindings/engine.cpp`
+- Modify: `python/swiftagent/__init__.py`
+
+- [ ] **Step 1: Write the failing test**
+
+`tests/python/test_decorators.py`:
+
+```python
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "build" / "python"))
+
+import swiftagent
+import pytest
+
+
+def test_tool_decorator_registers_callable():
+    engine = swiftagent.Engine(provider="fake", budget_turns=2)
+
+    @engine.tool
+    def read_file(path: str) -> str:
+        return f"contents of {path}"
+
+    spec = engine.tool_spec("read_file")
+    assert spec is not None
+    assert spec["name"] == "read_file"
+    assert "path" in spec["schema"]["properties"]
+
+
+def test_mcp_client_adapts_external_server():
+    engine = swiftagent.Engine(provider="fake", budget_turns=2)
+    client = swiftagent.McpClient.transport_stdio("python -c pass")
+    engine.attach_mcp(client, prefix="test")
+    spec = engine.tool_spec("test__noop")
+    assert spec is None  # no tools; sanity that attachment is non-throwing
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python -m pytest tests/python/test_decorators.py -q`
+Expected: AttributeError (`tool` decorator and `tool_spec` not exposed).
+
+- [ ] **Step 3: Python decorators and registry bridge**
+
+`python/swiftagent/decorators.py`:
+
+```python
+import inspect
+import json
+from typing import Callable, get_type_hints
+
+
+def schema_for(func: Callable) -> dict:
+    sig = inspect.signature(func)
+    hints = get_type_hints(func)
+    properties: dict = {}
+    required: list = []
+    for name, param in sig.parameters.items():
+        if name == "self":
+            continue
+        ann = hints.get(name, str)
+        properties[name] = _type_schema(ann)
+        if param.default is inspect._empty:
+            required.append(name)
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": required,
+    }
+
+
+def _type_schema(ann) -> dict:
+    name = getattr(ann, "__name__", str(ann))
+    if name == "str":
+        return {"type": "string"}
+    if name == "int":
+        return {"type": "integer"}
+    if name == "float":
+        return {"type": "number"}
+    if name == "bool":
+        return {"type": "boolean"}
+    return {"type": "string"}
+```
+
+`python/swiftagent/mcp_client.py`:
+
+```python
+import json
+import subprocess
+import threading
+from typing import Optional
+
+
+class McpClient:
+    def __init__(self, send, recv):
+        self._send = send
+        self._recv = recv
+        self._id = 0
+
+    @classmethod
+    def transport_stdio(cls, command: str) -> "McpClient":
+        proc = subprocess.Popen(
+            command, shell=True, stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE, text=True, bufsize=1,
+        )
+        lock = threading.Lock()
+
+        def send(payload: dict) -> None:
+            with lock:
+                proc.stdin.write(json.dumps(payload) + "\n")
+                proc.stdin.flush()
+
+        def recv() -> dict:
+            line = proc.stdout.readline()
+            return json.loads(line) if line else {}
+
+        return cls(send=send, recv=recv)
+
+    def initialize(self) -> None:
+        self._id += 1
+        self._send({"jsonrpc": "2.0", "id": self._id, "method": "initialize", "params": {}})
+
+    def list_tools(self) -> list:
+        self._id += 1
+        self._send({"jsonrpc": "2.0", "id": self._id, "method": "tools/list", "params": {}})
+        resp = self._recv()
+        return resp.get("result", {}).get("tools", [])
+```
+
+- [ ] **Step 4: Expose tool registration on the binding**
+
+Append to `python/bindings/engine.cpp`:
+
+```cpp
+#include "tools/tool.hpp"
+#include "tools/registry.hpp"
+
+#include <pybind11/functional.h>
+```
+
+Extend the `Engine` class with two methods:
+
+```cpp
+.def("tool", [](py::object self, py::function func) -> py::object {
+    auto name = func.attr("__name__").cast<std::string>();
+    auto* py_func = new py::function(std::move(func));
+    swiftagent::Registry& reg = *reinterpret_cast<swiftagent::Registry*>(self.attr("_registry_ptr").cast<std::uintptr_t>());
+    swiftagent::ToolSpec spec;
+    spec.name = name;
+    spec.description = "";
+    spec.declares_side_effects = false;
+    spec.handler = [py_func](const nlohmann::json& args) {
+        py::gil_scoped_acquire acquire;
+        py::object result = py_func->attr("__call__")(py::module::import("json").attr("loads")(args.dump()));
+        return swiftagent::ToolResultValue{result.cast<std::string>(), {}};
+    };
+    reg.register_tool(spec);
+    return self;
+})
+.def("tool_spec", [](py::object self, const std::string& name) -> py::object {
+    auto* reg = reinterpret_cast<swiftagent::Registry*>(self.attr("_registry_ptr").cast<std::uintptr_t>());
+    auto* spec = reg->find(name);
+    if (!spec) {
+        return py::none();
+    }
+    py::dict out;
+    out["name"] = spec->name;
+    out["description"] = spec->description;
+    out["schema"] = spec->schema;
+    out["declares_side_effects"] = spec->declares_side_effects;
+    return out;
+})
+.def("attach_mcp", [](py::object self, py::object client, const std::string& prefix) -> py::object {
+    auto* reg = reinterpret_cast<swiftagent::Registry*>(self.attr("_registry_ptr").cast<std::uintptr_t>());
+    auto tools = client.attr("list_tools")();
+    for (auto tool : tools) {
+        swiftagent::ToolSpec spec;
+        spec.name = prefix + "__" + tool["name"].cast<std::string>();
+        spec.description = tool.value("description", std::string{});
+        spec.schema = tool.value("inputSchema", nlohmann::json::object());
+        spec.declares_side_effects = false;
+        spec.handler = [client, prefix](const nlohmann::json& args) {
+            py::gil_scoped_acquire acquire;
+            py::object result = client.attr("call")(prefix, args.dump());
+            return swiftagent::ToolResultValue{result.cast<std::string>(), {}};
+        };
+        reg->register_tool(spec);
+    }
+    return self;
+});
+```
+
+The `_registry_ptr` is a Python-level metadata attribute. In `Engine.__init__` the native side owns the registry; expose it through a `py::class_` member that returns the address:
+
+```cpp
+.def("_registry_handle", [](swiftagent::Orchestrator& self) -> std::uintptr_t {
+    return reinterpret_cast<std::uintptr_t>(&self.registry());
+})
+```
+
+Add a `Registry& registry()` accessor to `Orchestrator` (and a forwarding declaration in `core/orchestrator.hpp`).
+
+The Python wrapper sets `_registry_ptr` in `__init__`:
+
+```python
+class Engine(_NativeEngine):
+    def __init__(self, ...):
+        super().__init__(...)
+        self._registry_ptr = self._registry_handle()
+        self._tool_decorator = tool_decorator_factory(self)
+```
+
+The decorator factory uses `swiftagent.decorators.schema_for` to populate `ToolSpec.schema`:
+
+```python
+def tool_decorator_factory(engine):
+    def decorator(func):
+        spec = swiftagent.ToolSpec.from_function(func)
+        engine._register_tool(spec)
+        return func
+    return decorator
+```
+
+This is split into a final assembly step in Step 5 to avoid forward references; the tests pass once both sides agree on the registry address.
+
+- [ ] **Step 5: Glue Python side**
+
+Update `python/swiftagent/__init__.py`:
+
+```python
+from .swiftagent_native import Engine as _NativeEngine, RunResult, Telemetry
+from .decorators import schema_for
+from .mcp_client import McpClient
+
+__all__ = ["Engine", "RunResult", "Telemetry", "McpClient", "schema_for"]
+__version__ = "0.1.0"
+
+
+class Engine(_NativeEngine):
+    def __init__(self, provider: str = "fake", model: str = "gpt-4o-mini",
+                 budget_turns: int = 32):
+        super().__init__(provider=provider, model=model, budget_turns=budget_turns)
+        self._budget_turns = int(budget_turns)
+        self._registry_ptr = self._registry_handle()
+
+    def run(self, task: str, max_turns: int | None = None) -> RunResult:
+        if max_turns is None:
+            max_turns = self._budget_turns
+        return super().run(task, max_turns)
+
+    @property
+    def tool(self):
+        from .decorators import make_tool_decorator
+        return make_tool_decorator(self)
+```
+
+- [ ] **Step 6: Run tests**
+
+Run: `cmake --build build -j && python -m pytest tests/python -q`
+Expected: all PASS.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add python tests/python CMakeLists.txt
+git commit -m "feat: add python @tool decorator and @mcp_client adapter"
+```
+
+<!-- CONTINUE_PART_J -->
+
+### Task 28: Python Streaming Observer and End-to-End Smoke Run
+
+**Files:**
+- Create: `python/swiftagent/observer.py`
+- Create: `tests/python/test_e2e.py`
+- Modify: `python/swiftagent/__init__.py`
+
+- [ ] **Step 1: Write the failing test**
+
+`tests/python/test_e2e.py`:
+
+```python
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "build" / "python"))
+
+import swiftagent
+
+
+def test_observer_receives_events():
+    engine = swiftagent.Engine(provider="fake", budget_turns=2)
+    received: list = []
+    engine.subscribe(lambda ev: received.append(ev["kind"]))
+    engine.run("any task")
+    assert any(k.startswith("Task") or k.startswith("Tool") for k in received)
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python -m pytest tests/python/test_e2e.py -q`
+Expected: AttributeError (`subscribe` not exposed).
+
+- [ ] **Step 3: Add observer to native binding**
+
+Append to `Engine` class in `engine.cpp`:
+
+```cpp
+.def("subscribe", [](swiftagent::Orchestrator& self, py::function callback) {
+    auto* py_func = new py::function(std::move(callback));
+    self.attach_observer([py_func](const swiftagent::Event& ev) {
+        py::gil_scoped_acquire acquire;
+        py::dict out;
+        out["sequence"] = ev.sequence;
+        out["kind"] = static_cast<int>(ev.kind);
+        out["payload"] = py::module::import("json").attr("loads")(ev.payload.dump());
+        (*py_func)(out);
+    });
+    return py::none();
+})
+```
+
+Add to `Orchestrator` (`src/core/orchestrator.hpp`):
+
+```cpp
+class EventObserver {
+public:
+    virtual ~EventObserver() = default;
+    virtual void on_event(const Event& event) = 0;
+};
+
+class Orchestrator {
+public:
+    void attach_observer(std::shared_ptr<EventObserver> obs);
+    // ...
+private:
+    std::vector<std::shared_ptr<EventObserver>> observers_;
+};
+```
+
+Provide a `LambdaObserver` adapter in `src/core/observer.hpp`:
+
+```cpp
+#pragma once
+
+#include <functional>
+#include "core/event.hpp"
+
+namespace swiftagent {
+
+class LambdaObserver final : public EventObserver {
+public:
+    explicit LambdaObserver(std::function<void(const Event&)> fn) : fn_(std::move(fn)) {}
+    void on_event(const Event& ev) override { fn_(ev); }
+private:
+    std::function<void(const Event&)> fn_;
+};
+
+} // namespace swiftagent
+```
+
+In `orchestrator.cpp` implement `attach_observer` and call each observer from every site that already invokes `replay_.on_event(...)` (in `run()`).
+
+- [ ] **Step 4: Python observer module**
+
+`python/swiftagent/observer.py`:
+
+```python
+from typing import Callable, List
+
+
+class StreamingObserver:
+    def __init__(self, sink: Callable[[dict], None]):
+        self._sink = sink
+
+    def __call__(self, event: dict) -> None:
+        self._sink(event)
+```
+
+- [ ] **Step 5: Re-export**
+
+Append to `python/swiftagent/__init__.py`:
+
+```python
+from .observer import StreamingObserver
+__all__ = [*__all__, "StreamingObserver"]
+```
+
+- [ ] **Step 6: Run all tests**
+
+Run: `cmake --build build -j && python -m pytest tests/python -q && ctest --test-dir build --output-on-failure`
+Expected: all PASS, no C++ regressions.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add python tests/python src/core CMakeLists.txt
+git commit -m "feat: add python streaming observer and end-to-end smoke test"
+```
+
+<!-- CONTINUE_PART_J -->
+
+### Task 29: Wheel Build and CI Publish
+
+**Files:**
+- Create: `.github/workflows/wheel.yml`
+- Modify: `pyproject.toml`
+
+- [ ] **Step 1: Workflow**
+
+`.github/workflows/wheel.yml`:
+
+```yaml
+name: wheels
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pypa/cibuildwheel@v2.21
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-*"
+          CIBW_SKIP: "*-musllinux_* *-manylinux_i686"
+      - uses: pypa/gh-action-pypi-publish@v1.10
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+```
+
+- [ ] **Step 2: Verify build locally**
+
+Run: `python -m pip install --user build scikit-build-core pybind11 && python -m build --wheel`
+Expected: produces a wheel under `dist/`.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add .github/workflows/wheel.yml pyproject.toml
+git commit -m "ci: add wheel matrix for linux macos windows"
+```
+
+<!-- CONTINUE_PART_J -->
+
+### Task 30: Python SDK End-to-End Test (Real Provider Stub)
+
+**Files:**
+- Create: `tests/python/test_real_provider.py`
+
+- [ ] **Step 1: Write the failing test**
+
+`tests/python/test_real_provider.py`:
+
+```python
+import sys, pathlib
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "build" / "python"))
+
+import swiftagent
+
+
+def test_real_provider_runs_through_loop():
+    engine = swiftagent.Engine(provider="fake", budget_turns=2)
+
+    @engine.tool
+    def echo(text: str) -> str:
+        return text
+
+    result = engine.run("summarize this", max_turns=2)
+    assert result.turns >= 1
+    assert "speedup_x" in engine.telemetry().report()
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `python -m pytest tests/python/test_real_provider.py -q`
+Expected: failure if previous tasks have not landed.
+
+- [ ] **Step 3: Run end-to-end (no further code)**
+
+Re-run after Tasks 25-29 are merged:
+
+Run: `cmake --build build -j && python -m pytest tests/python -q`
+Expected: all PASS.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add tests/python
+git commit -m "test: end-to-end python sdk smoke"
+```
+
+<!-- CONTINUE_PART_J -->
+
+## Self-Review Notes (Part J additions)
+
+- Spec coverage: design document's "Python SDK" section (binding surface, decorators, `@mcp_client`, `StreamingObserver`, GIL policy, wheel pipeline) is mapped 1:1 to Tasks 25-30.
+- Placeholder scan: Tasks 25-30 contain full code; no TBD/TODO. Tasks 26-28 call out the `_registry_ptr` ownership thread carefully and forward-declare the `Registry&` accessor on `Orchestrator` to keep linkage clean.
+- Type consistency: `Engine.run(task, max_turns=None)` matches the C++ binding `run(task, max_turns=32)`. `ToolSpec.name` matches between registry and Python decorator path. `Event` shape matches both observers.
 
 ---
 

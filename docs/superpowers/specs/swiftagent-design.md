@@ -215,6 +215,37 @@ Search: queries over event type, tool name, and full-text content.
 - Gateway: OpenAI-compatible chat completions, multi-endpoint, key rotation, retry-on-failure.
 - MCP Host: stdio and SSE transports; tools register into the executor dependency graph automatically.
 
+### Python SDK
+
+A first-class Python SDK exposes the full engine surface so Python developers can adopt SwiftAgent in a few lines, without paying the C++ build cost on day one.
+
+- Built with pybind11; the public ABI is a single `import swiftagent` module.
+- A prebuilt wheel is published for Linux, macOS, and Windows on every tagged release. Source distributions build the C++ extension through the same CMake project; users who cannot use the wheel can `pip install swiftagent --no-binary :swiftagent:` and get a working build with no manual steps.
+- The SDK mirrors the C++ 1:1 for the parts that matter, and provides idiomatic Python on top:
+  - `Engine`, `RunResult`, `Tool`, `ToolRegistry`, `McpHost`, `Replay`, `Telemetry`, `Budget`, `Provider` are the Python names.
+  - Tools are plain Python callables annotated with `@tool`. The decorator inspects type hints, builds the JSON schema, registers the callable, and surfaces it to the executor. No boilerplate.
+  - A `@mcp_client` decorator adapts an MCP server connection (stdio or SSE) into the same registry, so external MCP tools run through the same engine path.
+  - A `StreamingObserver` API lets Python code subscribe to live Replay events for in-process TUI / Web integration.
+- Concurrency model: pybind11 bindings are GIL-released on every potentially blocking C++ call (provider I/O, tool execution, file diff, cache read, replay import). Python callbacks that handle events run on a dedicated thread with the GIL reacquired.
+- Versioning: the Python module version is kept equal to the engine version, and the wheel ABI is locked per major version. Deprecations go through `DeprecationWarning` for at least one minor cycle.
+
+Example usage:
+
+```python
+import swiftagent
+
+engine = swiftagent.Engine(provider="openai", model="gpt-4o-mini", budget_turns=32)
+
+@engine.tool
+def read_file(path: str) -> str:
+    return open(path).read()
+
+result = engine.run("summarize the latest report in this folder")
+print(result.completed, result.turns, result.telemetry.speedup_x)
+```
+
+The SDK is the recommended adoption path; the CLI and Web panel remain for shell users and demonstrations.
+
 ## Data Flow
 
 1. Access layer submits a task to the Orchestrator.
@@ -247,6 +278,8 @@ Stage 2 - Quality and portability: semantic recall, cascade closed loop, Platfor
 
 Stage 3 - Replay and integration: deterministic replay with branching, MCP Host, Web panel.
 
+Stage 4 - Python SDK: pybind11 bindings, `Engine` / `RunResult` / `Telemetry` / `Replay` / `McpHost` surface, `@tool` and `@mcp_client` decorators, GIL-safe release on blocking paths, prebuilt wheels for the three target platforms, end-to-end Python test that runs a real task.
+
 Each stage ends with a runnable demo and passing tests.
 
 ## Risks
@@ -256,4 +289,5 @@ Each stage ends with a runnable demo and passing tests.
 - Cache staleness: mitigated by dependency-set validation at read and cache eligibility gated on fully observed side effects; worst case is a recompute, never a wrong answer.
 - Cascade calibration noise: scoring noise can only move routing toward a more conservative tier; a safety governor reverts any chore to the large model on divergence or repeated failure.
 - Pipelining benefit is workload-dependent: speedup is only claimed and measured for tool-intensive, weakly dependent workloads; serial-dominant workloads are measured and reported honestly.
+- Python binding GIL: every blocking C++ call releases the GIL, and Python callbacks for events run on a dedicated thread. The wheel ABI is pinned per major version to keep breakage rare.
 - Scope: the full feature set is large; stages are sequenced so that each stage is independently reviewable.
