@@ -5,6 +5,18 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(SWIFTAGENT_COVERAGE "Enable coverage flags" OFF)
+option(SWIFTAGENT_BUILD_EXAMPLES "Build example programs" ON)
+option(SWIFTAGENT_BUILD_BENCHMARKS "Build benchmark programs" ON)
+option(SWIFTAGENT_BUILD_TESTS "Build unit and integration tests" ON)
+
+if(SWIFTAGENT_COVERAGE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-arcs -ftest-coverage -O0 -g")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} --coverage")
+    add_compile_definitions(SWIFTAGENT_COVERAGE=1)
+endif()
+
 include(cmake/Dependencies.cmake)
 include(cmake/CompilerWarnings.cmake)
 
@@ -89,3 +101,23 @@ add_executable(bench_main
     tests/bench/benchwork.cpp
 )
 target_link_libraries(bench_main PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)
+
+if(SWIFTAGENT_BUILD_EXAMPLES)
+    add_executable(example_minimal examples/cpp/01_minimal.cpp)
+    target_link_libraries(example_minimal PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)
+
+    add_executable(example_custom_tool examples/cpp/02_custom_tool.cpp)
+    target_link_libraries(example_custom_tool PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)
+
+    add_executable(example_telemetry examples/cpp/03_telemetry.cpp)
+    target_link_libraries(example_telemetry PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)
+
+    add_executable(example_cache examples/cpp/04_cache.cpp)
+    target_link_libraries(example_cache PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)
+
+    add_executable(example_mcp examples/cpp/05_mcp_stdio.cpp)
+    if(UNIX)
+        target_compile_definitions(example_mcp PRIVATE SWIFTAGENT_EXAMPLE_HAVE_POSIX_STDIO=1)
+    endif()
+    target_link_libraries(example_mcp PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)
+endif()

@@ -6,8 +6,12 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  BUILD_TYPE: Release
+
 jobs:
   build-test:
+    name: build-test (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +39,7 @@ jobs:
           choco install cmake ninja
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
 
       - name: Build
         run: cmake --build build -j
@@ -44,6 +48,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   python-smoke:
+    name: python-smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,3 +64,151 @@ jobs:
           cmake --build build/python -j
       - name: Run Python tests
         run: PYTHONPATH=python python -m pytest tests/python -v
+
+  asan:
+    name: asan (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+      - name: Configure (ASan)
+        run: |
+          cmake -S . -B build-asan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=address"
+      - name: Build
+        run: cmake --build build-asan -j
+      - name: Test
+        run: ctest --test-dir build-asan --output-on-failure
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+
+  ubsan:
+    name: ubsan (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+      - name: Configure (UBSan)
+        run: |
+          cmake -S . -B build-ubsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=undefined"
+      - name: Build
+        run: cmake --build build-ubsan -j
+      - name: Test
+        run: ctest --test-dir build-ubsan --output-on-failure
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+  tsan:
+    name: tsan (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+      - name: Configure (TSan)
+        run: |
+          cmake -S . -B build-tsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=thread -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread" \
+            -DCMAKE_SHARED_LINKER_FLAGS="-fsanitize=thread"
+      - name: Build
+        run: cmake --build build-tsan -j
+      - name: Test
+        run: ctest --test-dir build-tsan --output-on-failure
+        env:
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+
+  coverage:
+    name: coverage (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ lcov
+      - name: Configure
+        run: |
+          cmake -S . -B build-cov -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DSWIFTAGENT_COVERAGE=ON \
+            -DCMAKE_CXX_FLAGS="--coverage -fprofile-arcs -ftest-coverage -O0 -g" \
+            -DCMAKE_EXE_LINKER_FLAGS="--coverage" \
+            -DCMAKE_SHARED_LINKER_FLAGS="--coverage"
+      - name: Build
+        run: cmake --build build-cov -j
+      - name: Test
+        run: ctest --test-dir build-cov --output-on-failure
+      - name: Capture coverage
+        run: |
+          lcov --capture --directory build-cov --output-file coverage.info \
+            --rc lcov_branch_coverage=1
+          lcov --remove coverage.info '/usr/*' '*/_deps/*' '*/build*/*' --output-file coverage.info \
+            --rc lcov_branch_coverage=1
+          lcov --list coverage.info
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.info
+            build-cov
+
+  format-check:
+    name: format-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+      - name: Check formatting
+        run: |
+          find src -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+          find python -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+
+  docs:
+    name: docs (doxygen)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install doxygen
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen
+      - name: Generate docs
+        run: doxygen Doxyfile
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doxygen-html
+          path: docs/doxygen/html

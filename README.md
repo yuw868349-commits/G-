@@ -24,6 +24,9 @@ C++23 写的 agent 执行引擎。能跑 plan-act-reflect 的多轮任务，自�
 - Python SDK（pybind11 封装 C++ 核心）
 - Benchmark 框架，三个标准负载
 - 单元测试 48 个，集成测试 + Python smoke test
+- 5 个可跑示例（`examples/cpp/`）
+- Doxygen 文档（`Doxyfile`）
+- CI：三平台编译 + ctest + Python + ASan + UBSan + TSan + 覆盖率 + 格式检查
 
 ## 架构
 
@@ -109,6 +112,16 @@ print(engine.telemetry().report())
 
 跑三个标准负载（文件重整、数据收集、依赖安装），对比串行和并行的加速比。
 
+## 示例
+
+`examples/cpp/` 下有 5 个独立可跑的例子，覆盖最小任务、自定义工具、遥测、缓存、MCP stdio 接入。详见 [examples/README.md](examples/README.md)。
+
+```bash
+cmake --build build --target example_minimal example_custom_tool \
+                              example_telemetry example_cache example_mcp
+./build/example_minimal
+```
+
 ## 测试
 
 ```bash
@@ -126,6 +139,17 @@ MCP host 支持：
 - SSE：通过 HTTP + Server-Sent Events 调远程服务
 
 工具注册后用统一接口调用，编排器不关心是本地还是远程。
+
+## 文档
+
+API 参考用 Doxygen 生成：
+
+```bash
+doxygen Doxyfile
+open docs/doxygen/html/index.html
+```
+
+CI 每次提交都跑一遍，把 HTML 当 artifact 上传。
 
 ## 贡献
 

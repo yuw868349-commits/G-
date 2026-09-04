@@ -9,3 +9,4 @@ out/
 .pytest_cache/
 *.swp
 .DS_Store
+docs/doxygen/
