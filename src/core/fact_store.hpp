@@ -16,6 +16,12 @@ struct Fact {
 class FactStore {
 public:
     explicit FactStore(std::string path = "");
+    ~FactStore();
+
+    FactStore(const FactStore&) = delete;
+    FactStore& operator=(const FactStore&) = delete;
+    FactStore(FactStore&&) = delete;
+    FactStore& operator=(FactStore&&) = delete;
 
     [[nodiscard]] std::string append(const std::string& type, const std::string& content);
     [[nodiscard]] std::optional<Fact> get(const std::string& id) const;
