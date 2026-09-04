@@ -6,6 +6,7 @@
 #include "core/error.hpp"
 #include "llm/fake_provider.hpp"
 #include "llm/openai_provider.hpp"
+#include "llm/retrying_provider.hpp"
 #include <httplib.h>
 
 using namespace swiftagent;
@@ -26,6 +27,64 @@ TEST_CASE("fake provider returns error when script is empty") {
     auto response = provider.complete(Messages{});
     REQUIRE_FALSE(response.ok());
     CHECK(response.error().kind == ErrorKind::ProviderFailure);
+}
+
+namespace {
+
+// A provider that fails the first N calls before succeeding.
+class FlakyProvider final : public Provider {
+public:
+    explicit FlakyProvider(std::uint32_t failures_before_success)
+        : failures_(failures_before_success) {}
+    [[nodiscard]] Result<ModelResponse> complete(const Messages&) override {
+        ++calls_;
+        if (calls_ <= failures_) {
+            return Result<ModelResponse>::fail(
+                Error{ErrorKind::ProviderFailure, "flaky failure " +
+                std::to_string(calls_)});
+        }
+        ModelResponse r;
+        r.outcome.plan = "finally";
+        return Result<ModelResponse>::ok(std::move(r));
+    }
+    [[nodiscard]] std::string name() const override { return "flaky"; }
+    std::uint32_t calls_{0};
+private:
+    std::uint32_t failures_{0};
+};
+
+} // namespace
+
+TEST_CASE("retrying provider retries transient failures and eventually succeeds") {
+    FlakyProvider inner(2);  // fail twice, succeed on the 3rd
+    RetryPolicy policy;
+    policy.max_attempts = 4;
+    policy.initial_backoff = std::chrono::milliseconds(1);
+    policy.max_backoff = std::chrono::milliseconds(2);
+    RetryingProvider retrying(std::make_shared<FlakyProvider>(inner), policy);
+
+    auto response = retrying.complete(Messages{});
+    REQUIRE(response.ok());
+    CHECK(response.value().outcome.plan == "finally");
+    CHECK(retrying.total_attempts() == 3);
+    CHECK(retrying.total_retries() == 2);
+}
+
+TEST_CASE("retrying provider gives up after max_attempts") {
+    FlakyProvider inner(10);  // never recovers within the budget
+    RetryPolicy policy;
+    policy.max_attempts = 3;
+    policy.initial_backoff = std::chrono::milliseconds(1);
+    policy.max_backoff = std::chrono::milliseconds(2);
+    auto inner_ptr = std::make_shared<FlakyProvider>(inner);
+    RetryingProvider retrying(inner_ptr, policy);
+
+    auto response = retrying.complete(Messages{});
+    REQUIRE_FALSE(response.ok());
+    CHECK(response.error().kind == ErrorKind::ProviderFailure);
+    CHECK(retrying.total_attempts() == 3);
+    CHECK(retrying.total_retries() == 2);
+    CHECK(inner_ptr->calls_ == 3);
 }
 
 TEST_CASE("openai provider parses chat completion response") {

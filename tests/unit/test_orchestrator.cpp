@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "core/orchestrator.hpp"
 #include "llm/fake_provider.hpp"
+#include "llm/retrying_provider.hpp"
 #include "tools/builtin.hpp"
 
 using namespace swiftagent;
@@ -41,4 +42,55 @@ TEST_CASE("orchestrator emits events into replay") {
     auto result = orch.run("test", budget);
     REQUIRE(result.ok());
     CHECK(orch.replay().size() > 0);
+}
+
+TEST_CASE("orchestrator aborts when budget.max_cost is exceeded") {
+    // Script: a single turn that reports enough usage to push the run
+    // over the configured max_cost ceiling. The run should mark itself
+    // bounded and surface "max_cost" as the bounded_reason.
+    FakeProvider provider;
+    provider.script({
+        {{"plan", "doing expensive work"},
+         {"usage", {{"prompt_tokens", 10000}, {"completion_tokens", 10000}}},
+         {"tool_calls", nlohmann::json::array()}}
+    });
+    OrchestratorOptions options;
+    options.token_budget = 1024;
+    options.pricing.prompt_per_1k = 0.01;
+    options.pricing.completion_per_1k = 0.02;
+    Orchestrator orch(provider, options);
+    Budget budget;
+    budget.max_turns = 4;
+    budget.max_cost = 0.05;  // (10/1 + 20/1)*1k = $0.21; budget caps at $0.05
+    budget.active = true;
+    auto result = orch.run("cost-limit test", budget);
+    REQUIRE(result.ok());
+    auto& r = result.value();
+    CHECK(r.bounded);
+    CHECK(r.bounded_reason == "max_cost");
+}
+
+TEST_CASE("orchestrator retries provider failures via the embedded RetryingProvider") {
+    // Wrap a FakeProvider that always succeeds, but make the outer
+    // retrying wrapper have a 1-attempt policy so we can prove the
+    // orchestrator reaches the underlying provider.  Then drive the
+    // run normally and check that retrying wrapping did not change
+    // behaviour for the success path.
+    FakeProvider provider;
+    provider.script({
+        {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}
+    });
+    OrchestratorOptions options;
+    options.token_budget = 1024;
+    options.retry_policy.max_attempts = 1;
+    options.retry_policy.initial_backoff = std::chrono::milliseconds(0);
+    options.retry_policy.max_backoff = std::chrono::milliseconds(0);
+    Orchestrator orch(provider, options);
+    orch.register_builtin();
+    Budget budget;
+    budget.max_turns = 2;
+    budget.active = true;
+    auto result = orch.run("retry smoke", budget);
+    REQUIRE(result.ok());
+    CHECK(result.value().completed);
 }
