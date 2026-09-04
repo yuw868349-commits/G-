@@ -5,13 +5,31 @@ build-backend = "scikit_build_core.build"
 [project]
 name = "praxis"
 version = "0.1.0"
-description = "C++23 agent execution engine with MCP, Python SDK, CLI, and Web panel."
+description = "Praxis — a C++23 agent execution engine. Turns plans into executed tool calls."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [{name = "Praxis Contributors"}]
-classifiers = ["Programming Language :: C++", "Programming Language :: Python :: 3"]
+keywords = ["agent", "llm", "mcp", "tool-use", "cpp", "python", "orchestrator"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: C++",
+    "Programming Language :: C++ :: 23",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/yuw868349-commits/praxis"
+Documentation = "https://github.com/yuw868349-commits/praxis#readme"
+Issues = "https://github.com/yuw868349-commits/praxis/issues"
+Changelog = "https://github.com/yuw868349-commits/praxis/releases"
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
