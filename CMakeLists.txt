@@ -12,19 +12,24 @@ enable_testing()
 
 add_library(swiftagent_core INTERFACE)
 target_link_libraries(swiftagent_core INTERFACE nlohmann_json::nlohmann_json)
+target_include_directories(swiftagent_core INTERFACE src)
 swiftagent_target_warnings(swiftagent_core)
 
 add_executable(swiftagent src/main.cpp)
 target_link_libraries(swiftagent PRIVATE swiftagent_core)
 
+add_library(swiftagent_llm STATIC
+    src/llm/fake_provider.cpp
+)
+target_link_libraries(swiftagent_llm PUBLIC swiftagent_core)
+
 add_executable(unit_tests
     tests/unit/test_main.cpp
     tests/unit/test_skeleton.cpp
     tests/unit/test_core_types.cpp
+    tests/unit/test_llm.cpp
 )
-target_include_directories(unit_tests PRIVATE src)
-target_compile_features(unit_tests PRIVATE cxx_std_23)
-target_link_libraries(unit_tests PRIVATE Catch2::Catch2WithMain swiftagent_core)
+target_link_libraries(unit_tests PRIVATE Catch2::Catch2WithMain swiftagent_core swiftagent_llm)
 
 include(Catch)
 catch_discover_tests(unit_tests)
