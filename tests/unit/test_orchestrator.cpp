@@ -13,7 +13,9 @@ TEST_CASE("orchestrator runs a multi-turn task with fake provider") {
         })}},
         {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}
     });
-    Orchestrator orch(provider, 1024);
+    OrchestratorOptions options;
+    options.token_budget = 1024;
+    Orchestrator orch(provider, options);
     orch.register_builtin();
     Budget budget;
     budget.max_turns = 4;
@@ -29,7 +31,9 @@ TEST_CASE("orchestrator emits events into replay") {
     provider.script({
         {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}
     });
-    Orchestrator orch(provider, 1024);
+    OrchestratorOptions options;
+    options.token_budget = 1024;
+    Orchestrator orch(provider, options);
     orch.register_builtin();
     Budget budget;
     budget.max_turns = 1;

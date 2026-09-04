@@ -24,15 +24,15 @@ int main()
     orchestrator.register_builtin();
 
     // Manually record some telemetry to demonstrate the surface.
-    orchestrator.telemetry().set_baseline_ms(1000.0);
-    orchestrator.telemetry().record_module("model", 12.5);
-    orchestrator.telemetry().record_module("tools", 3.4);
-    orchestrator.telemetry().record_token(120, 40);
-    orchestrator.telemetry().record_token(80, 20);
-    orchestrator.telemetry().record_cache_hit(true);
-    orchestrator.telemetry().record_cache_hit(true);
-    orchestrator.telemetry().record_cache_hit(false);
-    orchestrator.telemetry().record_tool_call(true);
+    orchestrator.set_baseline_ms(1000.0);
+    orchestrator.record_module("model", 12.5);
+    orchestrator.record_module("tools", 3.4);
+    orchestrator.record_token(120, 40);
+    orchestrator.record_token(80, 20);
+    orchestrator.record_cache_hit(true);
+    orchestrator.record_cache_hit(true);
+    orchestrator.record_cache_hit(false);
+    orchestrator.record_tool_call(true);
 
     Budget budget;
     budget.active = true;

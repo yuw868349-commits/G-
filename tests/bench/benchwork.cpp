@@ -99,9 +99,11 @@ BenchResult run_bench(const std::string& name, const nlohmann::json& script,
     auto start = std::chrono::steady_clock::now();
     FakeProvider provider;
     provider.script({script, {{"plan", "DONE"}, {"tool_calls", nlohmann::json::array()}}});
-    Orchestrator orch(provider, 16384);
+    OrchestratorOptions options;
+    options.token_budget = 16384;
+    Orchestrator orch(provider, options);
     orch.register_builtin();
-    orch.executor().set_parallel_safe(parallel);
+    orch.set_executor_parallel(parallel);
     Budget budget;
     budget.max_turns = 4;
     budget.active = true;

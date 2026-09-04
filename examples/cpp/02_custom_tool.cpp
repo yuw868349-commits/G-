@@ -80,7 +80,7 @@ int main()
 
     Orchestrator orchestrator(provider);
     orchestrator.register_builtin();
-    orchestrator.registry().register_tool(std::move(reverse));
+    orchestrator.register_tool(std::move(reverse));
 
     Budget budget;
     budget.active = true;
