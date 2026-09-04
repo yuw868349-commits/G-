@@ -1,5 +1,13 @@
 # SwiftAgent
 
+> **Name disambiguation.** SwiftAgent is a **C++23 agent execution
+> engine**. It is *not* related to the Apple/Swift programming language,
+> nor to any other project that happens to share the name. The "Swift"
+> in SwiftAgent refers to the engine's goal of being a *swift* (fast /
+> responsive) agent runtime. If you arrived here looking for the Swift
+> language server, SwiftUI, or Apple's open-source Swift packages,
+> please visit [swift.org](https://swift.org) instead.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-00599C.svg?logo=c%2B%2B&logoColor=white)](https://en.cppreference.com/w/cpp/23)
 [![CMake](https://img.shields.io/badge/CMake-3.24%2B-064F8C?logo=cmake&logoColor=white)](https://cmake.org/)
