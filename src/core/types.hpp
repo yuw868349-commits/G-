@@ -33,6 +33,13 @@ struct Budget {
     bool active{false};
 };
 
+struct PricingConfig {
+    // USD per 1000 prompt tokens.
+    double prompt_per_1k{0.0};
+    // USD per 1000 completion tokens.
+    double completion_per_1k{0.0};
+};
+
 enum class ExecutionForm { Serial, Grouped, Pipelined };
 
 struct DependencySummary {
