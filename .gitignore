@@ -5,3 +5,7 @@ cmake-build-*/
 __pycache__/
 *.pyc
 *.so
+out/
+.pytest_cache/
+*.swp
+.DS_Store
