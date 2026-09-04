@@ -32,8 +32,8 @@ TEST_CASE("decision tier routes to large by default and is observable") {
     // it back into the cascade's per-role statistics.
     ModelCascade cascade;
     CHECK(cascade.route_for(Role::Decision) == Tier::Large);
-    cascade.record_outcome(Tier::Large, Role::Decision, true);
+    // Two outcomes, one of which is a divergence => 50% divergence.
     cascade.record_outcome(Tier::Large, Role::Decision, false);
-    CHECK(cascade.divergence_rate(Tier::Large) == 0.5);
+    cascade.record_outcome(Tier::Large, Role::Decision, true);
     CHECK(cascade.divergence_rate(Tier::Large) == 0.5);
 }
