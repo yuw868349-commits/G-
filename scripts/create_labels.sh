@@ -1,11 +1,25 @@
 #!/usr/bin/env bash
 # Create the standard Praxis issue labels on GitHub via the API.
 # Run once after creating the repo (or whenever you need to reset labels).
+# Idempotent: uses PATCH (update) first, falls back to POST (create).
 #
 # Requires: GH_TOKEN / GITHUB_TOKEN env var with repo scope.
 set -euo pipefail
 
-REPO="${REPO:-yuw868349-commits/praxis}"
+# Auth shim: if `gh` is not authenticated but a token is in the
+# environment, log gh in with it before doing anything else.
+if ! gh auth status >/dev/null 2>&1; then
+    if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+        echo ">>> gh not authenticated; logging in from GH_TOKEN env"
+        echo "${GH_TOKEN:-${GITHUB_TOKEN}}" | gh auth login --with-token >/dev/null
+    else
+        echo "error: not authenticated." >&2
+        echo "  Either run 'gh auth login' or set GH_TOKEN / GITHUB_TOKEN." >&2
+        exit 1
+    fi
+fi
+
+REPO="${REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || echo yuw868349-commits/praxis)}"
 API="https://api.github.com/repos/${REPO}/labels"
 
 declare -a LABELS=(
@@ -31,13 +45,29 @@ declare -a LABELS=(
   '{"name":"area: ci","color":"5319e7","description":"CI / build infrastructure"}'
 )
 
+auth_token() {
+    gh auth token 2>/dev/null \
+        || echo "${GH_TOKEN:-${GITHUB_TOKEN:-}}"
+}
+
 for body in "${LABELS[@]}"; do
-  echo "create $(echo "$body" | python3 -c 'import sys,json;print(json.load(sys.stdin)["name"])')"
-  curl -sS -X POST \
-    -H "Authorization: Bearer ${GH_TOKEN:-${GITHUB_TOKEN}}" \
-    -H "Accept: application/vnd.github+json" \
-    "$API" \
-    -d "$body" >/dev/null || true
+    name=$(echo "$body" | python3 -c 'import sys,json;print(json.load(sys.stdin)["name"])')
+    # GitHub's labels URL must be URL-encoded.  Names with spaces,
+    # colons, etc. need that to work, so do it unconditionally.
+    encoded_name=$(python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=''))" "$name")
+    echo "upsert $name"
+    status=$(curl -sS -o /dev/null -w "%{http_code}" -X PATCH \
+        -H "Authorization: Bearer $(auth_token)" \
+        -H "Accept: application/vnd.github+json" \
+        "${API}/${encoded_name}" \
+        -d "$body" || echo "000")
+    if [ "$status" != "200" ]; then
+        curl -sS -o /dev/null -X POST \
+            -H "Authorization: Bearer $(auth_token)" \
+            -H "Accept: application/vnd.github+json" \
+            "$API" \
+            -d "$body" || true
+    fi
 done
 
 echo "done"

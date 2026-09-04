@@ -47,11 +47,17 @@ gh_api() {
 export -f gh_api
 
 # Step 1: rename or create the repo.
-if gh repo view "${ORG}/${OLD_NAME}" >/dev/null 2>&1; then
+# `gh repo view` follows GitHub's rename redirect transparently, so
+# we have to inspect the canonical name from the API rather than
+# trusting the URL we asked for.
+current_name=$(gh api "repos/${ORG}/${OLD_NAME}" --jq '.name' 2>/dev/null || echo "")
+if [ "${current_name}" = "${OLD_NAME}" ]; then
     echo ">>> renaming ${ORG}/${OLD_NAME} -> ${ORG}/${NEW_NAME}"
     gh repo rename "${NEW_NAME}" --repo "${ORG}/${OLD_NAME}"
+elif [ "${current_name}" = "${NEW_NAME}" ]; then
+    echo ">>> ${ORG}/${OLD_NAME} is already named ${NEW_NAME}, skipping rename"
 elif gh repo view "${ORG}/${NEW_NAME}" >/dev/null 2>&1; then
-    echo ">>> repo ${ORG}/${NEW_NAME} already exists, skipping rename"
+    echo ">>> ${ORG}/${NEW_NAME} already exists, skipping rename"
 else
     echo ">>> creating ${ORG}/${NEW_NAME}"
     gh repo create "${ORG}/${NEW_NAME}" \
@@ -61,22 +67,33 @@ else
 fi
 
 # Step 2: update description, homepage, and topics.
-echo ">>> updating description / homepage / topics"
+# Note: `gh repo edit` only accepts one flag of the same "kind"
+# per invocation in this CLI version, so we split each into its
+# own call.  Topics go through the API directly to avoid the
+# "accepts at most 1 arg" CLI parsing bug.
+echo ">>> updating description / homepage / topics / features"
 gh repo edit "${ORG}/${NEW_NAME}" \
-    --description "Praxis — a C++23 agent execution engine. Turns plans into executed tool calls." \
-    --homepage "https://github.com/${ORG}/${NEW_NAME}#readme" \
-    --add-topic agent \
-    --add-topic llm \
-    --add-topic mcp \
-    --add-topic cpp \
-    --add-topic cpp23 \
-    --add-topic orchestrator \
-    --add-topic tool-use \
-    --add-topic python \
-    --delete-branch false \
-    --enable-issues \
-    --enable-projects false \
-    --enable-wiki false
+    --description "Praxis — a C++23 agent execution engine. Turns plans into executed tool calls."
+gh repo edit "${ORG}/${NEW_NAME}" \
+    --homepage "https://github.com/${ORG}/${NEW_NAME}#readme"
+gh repo edit "${ORG}/${NEW_NAME}" --enable-issues
+gh repo edit "${ORG}/${NEW_NAME}" --enable-projects=false
+gh repo edit "${ORG}/${NEW_NAME}" --enable-wiki=false
+
+# Existing topics + new ones (deduplicated).
+existing_topics=$(gh api "repos/${ORG}/${NEW_NAME}/topics" --jq '.names | join("\n")' 2>/dev/null || echo "")
+all_topics_json=$(
+    printf "%s\n" agent llm mcp cpp cpp23 orchestrator tool-use python \
+        | { cat - <(echo "${existing_topics}"); } \
+        | sed '/^$/d' \
+        | sort -u \
+        | python3 -c 'import sys, json; print(json.dumps({"names": sys.stdin.read().splitlines()}))'
+)
+gh api -X PUT "repos/${ORG}/${NEW_NAME}/topics" \
+    -H "Accept: application/vnd.github+json" \
+    -H "Content-Type: application/json" \
+    --input - <<<"${all_topics_json}" >/dev/null
+echo ">>> topics: $(echo "${all_topics_json}" | python3 -c 'import sys,json;print(", ".join(json.load(sys.stdin)["names"]))')"
 
 # Step 3: ensure the local main branch points at the new remote and
 # the new remote is the upstream.
@@ -93,7 +110,28 @@ else
 fi
 
 # Step 5: create / refresh the v0.1.0 release.
-if ! gh release view "v0.1.0" --repo "${ORG}/${NEW_NAME}" >/dev/null 2>&1; then
+release_notes=$(cat <<'NOTES'
+First public release of **Praxis** — a C++23 cross-platform agent execution engine.
+
+### Highlights
+- Plan-act-reflect loop with budget enforcement
+- Built-in tools: `read_file`, `write_file`, `shell` (execvp-backed, no shell injection)
+- MCP host: stdio and SSE transports
+- Model cascade: chore / decision roles with divergence-based escalation
+- Cache, replay, telemetry, and side-effect observation
+- Python SDK (pybind11)
+- CLI and Web panel (default-bound to loopback, optional basic-auth)
+- Linux / macOS / Windows
+NOTES
+)
+
+if gh release view "v0.1.0" --repo "${ORG}/${NEW_NAME}" >/dev/null 2>&1; then
+    echo ">>> v0.1.0 release exists, refreshing notes"
+    gh release edit "v0.1.0" \
+        --repo "${ORG}/${NEW_NAME}" \
+        --title "Praxis v0.1.0" \
+        --notes "${release_notes}"
+else
     echo ">>> creating v0.1.0 tag and release"
     if ! git ls-remote --tags origin v0.1.0 | grep -q v0.1.0; then
         git tag -a v0.1.0 -m "v0.1.0" HEAD
@@ -102,17 +140,7 @@ if ! gh release view "v0.1.0" --repo "${ORG}/${NEW_NAME}" >/dev/null 2>&1; then
     gh release create "v0.1.0" \
         --repo "${ORG}/${NEW_NAME}" \
         --title "Praxis v0.1.0" \
-        --notes "First public release of **Praxis** — a C++23 cross-platform agent execution engine.
-
-Highlights:
-- Plan-act-reflect loop with budget enforcement
-- Built-in tools: \`read_file\`, \`write_file\`, \`shell\` (execvp-backed, no shell injection)
-- MCP host: stdio and SSE transports
-- Model cascade: chore / decision roles with divergence-based escalation
-- Cache, replay, telemetry, and side-effect observation
-- Python SDK (pybind11)
-- CLI and Web panel (default-bound to loopback, optional basic-auth)
-- Linux / macOS / Windows" \
+        --notes "${release_notes}" \
         --target main
 fi
 
