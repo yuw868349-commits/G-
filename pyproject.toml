@@ -1,0 +1,21 @@
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11>=2.12", "cmake>=3.24", "ninja"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "swiftagent"
+version = "0.1.0"
+description = "High-performance agent execution engine."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "SwiftAgent Contributors"}]
+classifiers = ["Programming Language :: C++", "Programming Language :: Python :: 3"]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.scikit-build]
+wheel.expand-cmake-modules = ["python/CMakeLists.txt"]
+sdist.exclude = [".github", "build*"]
