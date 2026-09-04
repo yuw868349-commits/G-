@@ -7,7 +7,7 @@
 
 #include "tools/builtin.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -443,4 +443,4 @@ Result<RunResult> Orchestrator::run(const std::string& task,
     return Result<RunResult>::ok(std::move(result));
 }
 
-} // namespace swiftagent
+} // namespace praxis

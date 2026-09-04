@@ -7,7 +7,7 @@
 #include <string>
 #include <utility>
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -142,4 +142,4 @@ void FactStore::flush() {
     }
 }
 
-}  // namespace swiftagent
+}  // namespace praxis

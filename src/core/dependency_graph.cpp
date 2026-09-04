@@ -5,7 +5,7 @@
 #include <queue>
 #include <set>
 
-namespace swiftagent {
+namespace praxis {
 
 void DependencyGraph::add_call(const ToolCall& call,
                                const std::vector<std::string>& resources) {
@@ -105,4 +105,4 @@ std::vector<std::vector<std::size_t>> DependencyGraph::schedule() const {
     return groups;
 }
 
-} // namespace swiftagent
+} // namespace praxis

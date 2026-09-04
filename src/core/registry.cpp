@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -66,4 +66,4 @@ std::vector<std::string> ToolRegistry::names() const {
     return out;
 }
 
-} // namespace swiftagent
+} // namespace praxis

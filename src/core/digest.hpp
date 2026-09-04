@@ -5,7 +5,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
-namespace swiftagent {
+namespace praxis {
 
 using HardKeys = std::map<std::string, std::string>;
 
@@ -54,4 +54,4 @@ private:
     SoftFingerprint soft_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

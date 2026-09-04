@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace swiftagent {
+namespace praxis {
 
 struct ProcessSpec {
     std::string command;
@@ -43,4 +43,4 @@ std::unique_ptr<Platform> make_windows_platform();
 std::unique_ptr<Platform> make_posix_platform();
 #endif
 
-} // namespace swiftagent
+} // namespace praxis

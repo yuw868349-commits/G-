@@ -3,7 +3,7 @@
 #include <nlohmann/json.hpp>
 #include "core/error.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -89,4 +89,4 @@ Result<ModelResponse> OpenAIProvider::complete(const Messages& context) {
     return Result<ModelResponse>::ok(std::move(response));
 }
 
-} // namespace swiftagent
+} // namespace praxis

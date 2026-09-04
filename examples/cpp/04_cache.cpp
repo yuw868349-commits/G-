@@ -9,7 +9,7 @@
 
 int main()
 {
-    using namespace swiftagent;
+    using namespace praxis;
 
     Cache cache;
 

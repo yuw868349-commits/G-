@@ -1,4 +1,4 @@
-function(swiftagent_target_warnings target)
+function(praxis_target_warnings target)
     get_target_property(_type ${target} TYPE)
     if(MSVC)
         if(_type STREQUAL "INTERFACE_LIBRARY")

@@ -9,7 +9,7 @@
 #include "llm/fake_provider.hpp"
 #include "llm/openai_provider.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 std::unique_ptr<Provider> make_provider_from_cli(const CliOptions& opts) {
     if (opts.provider_name == "openai") {
@@ -50,7 +50,7 @@ CliOptions parse_cli(int argc, char** argv) {
         } else if (arg == "--verbose" || arg == "-v") {
             opts.verbose = true;
         } else if (arg == "--help" || arg == "-h") {
-            std::cout << "Usage: swiftagent [task] [options]\n"
+            std::cout << "Usage: praxis [task] [options]\n"
                       << "  --provider NAME   fake|openai (default fake)\n"
                       << "  --model NAME      model name (default gpt-4o-mini)\n"
                       << "  --api-key KEY     API key\n"
@@ -99,4 +99,4 @@ int run_cli(const CliOptions& opts) {
     return 0;
 }
 
-} // namespace swiftagent
+} // namespace praxis

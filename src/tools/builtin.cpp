@@ -15,7 +15,7 @@
 #include <unistd.h>
 #endif
 
-namespace swiftagent {
+namespace praxis {
 
 // The default fork() returns a fresh StatelessContext.  This is
 // only invoked from tool contexts that have not been updated to
@@ -160,7 +160,7 @@ public:
         }
 
         if (timed_out) {
-            out += "\n[swiftagent] tool execution exceeded the 30s deadline; terminating child\n";
+            out += "\n[praxis] tool execution exceeded the 30s deadline; terminating child\n";
             ::kill(pid, SIGTERM);
             for (int i = 0; i < kGraceTicks; ++i) {
                 int status = 0;
@@ -370,4 +370,4 @@ ToolResult ShellTool::invoke(const ToolCall& call, ToolContext& ctx) {
     return ToolResult{true, nlohmann::json{{"output", output}}, "", {}};
 }
 
-} // namespace swiftagent
+} // namespace praxis

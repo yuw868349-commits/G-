@@ -9,7 +9,7 @@
 #include <thread>
 #include <utility>
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -19,7 +19,7 @@ void perform_mcp_handshake(JsonRpcClient& client) {
     nlohmann::json init_params = {
         {"protocolVersion", "2024-11-05"},
         {"capabilities", nlohmann::json::object()},
-        {"clientInfo", {{"name", "swiftagent"}, {"version", "0.1.0"}}},
+        {"clientInfo", {{"name", "praxis"}, {"version", "0.1.0"}}},
     };
     auto init_result = client.call("initialize", init_params);
     (void)init_result;  // server returns serverInfo + capabilities
@@ -382,4 +382,4 @@ void McpHost::register_remote_tool(const McpToolSpec& spec, const std::string& p
         full_name, spec.description, spec.schema, client, prefix));
 }
 
-} // namespace swiftagent
+} // namespace praxis

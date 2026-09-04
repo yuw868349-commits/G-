@@ -5,7 +5,7 @@
 #include "core/orchestrator.hpp"
 #include "llm/provider.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct CliOptions {
     std::string task;
@@ -38,4 +38,4 @@ int run_web(const CliOptions& opts);
 
 std::unique_ptr<Provider> make_provider_from_cli(const CliOptions& opts);
 
-} // namespace swiftagent
+} // namespace praxis

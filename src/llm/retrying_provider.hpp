@@ -5,7 +5,7 @@
 
 #include "llm/provider.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct RetryPolicy {
     std::uint32_t max_attempts{3};
@@ -34,4 +34,4 @@ private:
     std::uint32_t retries_{0};
 };
 
-} // namespace swiftagent
+} // namespace praxis

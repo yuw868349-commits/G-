@@ -4,7 +4,7 @@
 #include "core/side_effect.hpp"
 
 namespace fs = std::filesystem;
-using namespace swiftagent;
+using namespace praxis;
 
 namespace {
 
@@ -16,7 +16,7 @@ void write_file(const fs::path& p, const std::string& content) {
 } // namespace
 
 TEST_CASE("side effect observer reports new files") {
-    auto root = fs::temp_directory_path() / "swiftagent_side_effect_test_new";
+    auto root = fs::temp_directory_path() / "praxis_side_effect_test_new";
     fs::remove_all(root);
     fs::create_directories(root);
     SideEffectObserver obs;
@@ -28,7 +28,7 @@ TEST_CASE("side effect observer reports new files") {
 }
 
 TEST_CASE("side effect observer reports modified files") {
-    auto root = fs::temp_directory_path() / "swiftagent_side_effect_test_mod";
+    auto root = fs::temp_directory_path() / "praxis_side_effect_test_mod";
     fs::remove_all(root);
     fs::create_directories(root);
     write_file(root / "f.txt", "before");
@@ -41,7 +41,7 @@ TEST_CASE("side effect observer reports modified files") {
 }
 
 TEST_CASE("side effect observer reports removed files") {
-    auto root = fs::temp_directory_path() / "swiftagent_side_effect_test_rm";
+    auto root = fs::temp_directory_path() / "praxis_side_effect_test_rm";
     fs::remove_all(root);
     fs::create_directories(root);
     write_file(root / "g.txt", "data");
@@ -58,7 +58,7 @@ TEST_CASE("side effect observer is incremental: unchanged files are not re-hashe
     // unchanged tree must produce no changes.  This is the
     // steady-state behaviour that keeps large directories cheap to
     // watch: a no-op turn is a stat() per file, not a full read.
-    auto root = fs::temp_directory_path() / "swiftagent_side_effect_test_inc";
+    auto root = fs::temp_directory_path() / "praxis_side_effect_test_inc";
     fs::remove_all(root);
     fs::create_directories(root);
     for (int i = 0; i < 20; ++i) {

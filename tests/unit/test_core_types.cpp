@@ -6,7 +6,7 @@
 
 #include <stdexcept>
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("error has category") {
     auto e = Error{ErrorKind::Timeout, "tool timed out"};

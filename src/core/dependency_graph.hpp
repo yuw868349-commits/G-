@@ -7,7 +7,7 @@
 #include <vector>
 #include "core/types.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct ResourceClaim {
     std::string resource;
@@ -32,4 +32,4 @@ private:
     std::unordered_map<std::string, std::vector<std::size_t>> resource_owners_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

@@ -8,7 +8,7 @@
 #include "core/types.hpp"
 #include "tools/tool.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct ToolExecutionRecord {
     std::size_t ordinal{0};
@@ -45,4 +45,4 @@ private:
     std::size_t failures_{0};
 };
 
-} // namespace swiftagent
+} // namespace praxis

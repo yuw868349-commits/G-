@@ -6,7 +6,7 @@
 #include <vector>
 #include "tools/tool.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 // `ToolRegistry` lives in the `core` library so that `core/orchestrator`,
 // `core/tool_executor`, and `mcp/mcp_host` can use it without depending
@@ -26,4 +26,4 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Tool>> tools_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

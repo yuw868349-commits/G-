@@ -2,7 +2,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include "core/context_manager.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 using Catch::Matchers::ContainsSubstring;
 
 TEST_CASE("working set keeps token budget bounded") {

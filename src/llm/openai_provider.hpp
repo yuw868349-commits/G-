@@ -4,7 +4,7 @@
 #include <httplib.h>
 #include "llm/provider.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 // OpenAI-compatible chat completion provider.
 //
@@ -38,4 +38,4 @@ private:
     httplib::Client client_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

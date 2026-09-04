@@ -7,7 +7,7 @@
 #include "mcp/json_rpc.hpp"
 #include "tools/tool.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct McpToolSpec {
     std::string name;
@@ -60,4 +60,4 @@ private:
     std::vector<std::shared_ptr<JsonRpcClient>> clients_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

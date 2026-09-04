@@ -9,7 +9,7 @@
 #include "core/error.hpp"
 #include "core/types.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct Message {
     std::string role;
@@ -111,4 +111,4 @@ public:
     [[nodiscard]] virtual std::string name() const = 0;
 };
 
-} // namespace swiftagent
+} // namespace praxis

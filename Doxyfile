@@ -1,6 +1,6 @@
-# Doxyfile for SwiftAgent
+# Doxyfile for Praxis
 
-PROJECT_NAME           = "SwiftAgent"
+PROJECT_NAME           = "Praxis"
 PROJECT_NUMBER         = "0.1.0"
 PROJECT_BRIEF          = "C++23 agent execution engine"
 PROJECT_LOGO           =

@@ -12,7 +12,7 @@
 
 int main()
 {
-    using namespace swiftagent;
+    using namespace praxis;
 
     FakeProvider provider;
     provider.script({

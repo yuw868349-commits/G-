@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <nlohmann/json.hpp>
 
-namespace swiftagent {
+namespace praxis {
 
 enum class EventKind : std::uint8_t {
     TurnStarted,
@@ -34,4 +34,4 @@ public:
     virtual void on_event(const Event& event) = 0;
 };
 
-} // namespace swiftagent
+} // namespace praxis

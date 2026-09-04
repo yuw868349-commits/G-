@@ -4,7 +4,7 @@
 
 #if !defined(_WIN32)
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("platform run honours timeout for silent children") {
     auto plat = make_platform();

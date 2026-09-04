@@ -20,11 +20,11 @@
 #include "mcp/mcp_host.hpp"
 #include "tools/registry.hpp"
 
-#if SWIFTAGENT_EXAMPLE_HAVE_POSIX_STDIO
+#if PRAXIS_EXAMPLE_HAVE_POSIX_STDIO
 #include "posix_stdio_transport.hpp"
 #endif
 
-class StdoutContext final : public swiftagent::ToolContext
+class StdoutContext final : public praxis::ToolContext
 {
 public:
     [[nodiscard]] std::string read_file(const std::string& path) override {
@@ -43,7 +43,7 @@ public:
 
 int main(int argc, char** argv)
 {
-    using namespace swiftagent;
+    using namespace praxis;
 
     std::string script = "examples/scripts/file_mcp.py";
     if (argc > 1) {
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     ToolRegistry registry;
     McpHost host(registry);
 
-#if SWIFTAGENT_EXAMPLE_HAVE_POSIX_STDIO
+#if PRAXIS_EXAMPLE_HAVE_POSIX_STDIO
     try
     {
         auto transport = std::make_unique<example::PosixStdioTransport>(
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
         ToolCall write_call;
         write_call.name = "file__write_file";
         write_call.arguments =
-            R"({"path":"/tmp/swiftagent_mcp_probe.txt","content":"hello from c++ via mcp\n"})";
+            R"({"path":"/tmp/praxis_mcp_probe.txt","content":"hello from c++ via mcp\n"})";
         auto write_result = write_tool->invoke(write_call, ctx);
         if (!write_result.ok) {
             std::cerr << "write_file failed: " << write_result.error_message << "\n";
@@ -114,7 +114,7 @@ int main(int argc, char** argv)
 
         ToolCall read_call;
         read_call.name = "file__read_file";
-        read_call.arguments = R"({"path":"/tmp/swiftagent_mcp_probe.txt"})";
+        read_call.arguments = R"({"path":"/tmp/praxis_mcp_probe.txt"})";
         auto read_result = read_tool->invoke(read_call, ctx);
         if (!read_result.ok) {
             std::cerr << "read_file failed: " << read_result.error_message << "\n";

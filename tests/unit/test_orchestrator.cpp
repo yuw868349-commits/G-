@@ -4,7 +4,7 @@
 #include "llm/retrying_provider.hpp"
 #include "tools/builtin.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("orchestrator runs a multi-turn task with fake provider") {
     FakeProvider provider;

@@ -1,18 +1,18 @@
-name: swiftagent
+name: praxis
 description: C++23 agent execution engine with MCP, Python SDK, CLI, and Web panel
 license: MIT
 
 cff-version: 1.2.0
 message: |
-  If you use SwiftAgent in academic work, please cite it using the
+  If you use Praxis in academic work, please cite it using the
   metadata below.
 type: software
-title: SwiftAgent
+title: Praxis
 version: 0.1.0
 date-released: 2026-09-04
-url: https://github.com/yuw868349-commits/swift-agent
-repository-code: https://github.com/yuw868349-commits/swift-agent
-repository: https://github.com/yuw868349-commits/swift-agent
+url: https://github.com/yuw868349-commits/praxis
+repository-code: https://github.com/yuw868349-commits/praxis
+repository: https://github.com/yuw868349-commits/praxis
 keywords:
   - agent
   - llm
@@ -22,12 +22,12 @@ keywords:
   - python
 license: MIT
 authors:
-  - name: SwiftAgent Contributors
+  - name: Praxis Contributors
     alias: yuw868349-commits
-    affiliation: SwiftAgent Project
+    affiliation: Praxis Project
 contact:
-  - name: SwiftAgent Issues
-    url: https://github.com/yuw868349-commits/swift-agent/issues
+  - name: Praxis Issues
+    url: https://github.com/yuw868349-commits/praxis/issues
 references:
   - type: software
     title: Model Context Protocol specification

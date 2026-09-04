@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace swiftagent {
+namespace praxis {
 
 class Telemetry {
 public:
@@ -63,4 +63,4 @@ private:
     std::chrono::steady_clock::time_point start_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

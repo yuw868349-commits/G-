@@ -5,7 +5,7 @@
 
 #include "benchwork.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 namespace {
 

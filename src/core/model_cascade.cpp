@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-namespace swiftagent {
+namespace praxis {
 
 Tier ModelCascade::route_for(Role role) const {
     if (role == Role::Decision) {
@@ -80,4 +80,4 @@ bool ModelCascade::is_pinned(Tier tier) const {
     return divergence_rate(Tier::Small) > missing_upgrade_threshold_;
 }
 
-} // namespace swiftagent
+} // namespace praxis

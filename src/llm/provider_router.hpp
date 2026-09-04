@@ -7,7 +7,7 @@
 #include "core/model_cascade.hpp"
 #include "llm/provider.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 // Maps a `Tier` (small / large) to a concrete `Provider`. The router is
 // mutable so callers can hot-swap underlying models at runtime (e.g. when
@@ -23,4 +23,4 @@ private:
     std::map<Tier, std::shared_ptr<Provider>> providers_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

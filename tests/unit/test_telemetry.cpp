@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "core/telemetry.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("telemetry aggregates module timings") {
     Telemetry t;

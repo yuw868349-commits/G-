@@ -15,7 +15,7 @@
 
 namespace example {
 
-class PosixStdioTransport final : public swiftagent::JsonRpcTransport
+class PosixStdioTransport final : public praxis::JsonRpcTransport
 {
 public:
     explicit PosixStdioTransport(const std::string& command)

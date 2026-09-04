@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace swiftagent {
+namespace praxis {
 
 void Replay::record(const Event& event) {
     std::lock_guard<std::mutex> lock(mtx_);
@@ -65,4 +65,4 @@ void Replay::replay_into(EventSink& sink) const {
     }
 }
 
-} // namespace swiftagent
+} // namespace praxis

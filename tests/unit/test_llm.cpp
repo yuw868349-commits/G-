@@ -9,7 +9,7 @@
 #include "llm/retrying_provider.hpp"
 #include <httplib.h>
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("fake provider replays scripted responses") {
     FakeProvider provider;

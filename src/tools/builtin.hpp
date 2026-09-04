@@ -4,7 +4,7 @@
 #include "tools/registry.hpp"
 #include "tools/tool.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 class ReadFileTool;
 class WriteFileTool;
@@ -47,4 +47,4 @@ private:
     std::shared_ptr<ToolContext> ctx_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

@@ -15,7 +15,7 @@
 ## 跑
 
 ```bash
-cmake -S . -B build -DSWIFTAGENT_BUILD_EXAMPLES=ON
+cmake -S . -B build -DPRAXIS_BUILD_EXAMPLES=ON
 cmake --build build --target example_minimal example_custom_tool \
                               example_telemetry example_cache example_mcp
 

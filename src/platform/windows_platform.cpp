@@ -11,7 +11,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace swiftagent {
+namespace praxis {
 
 class WindowsPlatform final : public Platform {
 public:
@@ -190,4 +190,4 @@ std::unique_ptr<Platform> make_platform() {
     return make_windows_platform();
 }
 
-} // namespace swiftagent
+} // namespace praxis

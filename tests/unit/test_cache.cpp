@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "core/cache.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("cache stores and returns values") {
     Cache cache;

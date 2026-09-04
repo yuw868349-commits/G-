@@ -1,4 +1,4 @@
-from .swiftagent_native import Engine as _NativeEngine, RunResult, Telemetry
+from .praxis_native import Engine as _NativeEngine, RunResult, Telemetry
 
 __all__ = ["Engine", "RunResult", "Telemetry"]
 __version__ = "0.1.0"

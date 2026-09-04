@@ -7,7 +7,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace swiftagent {
+namespace praxis {
 
 struct JsonRpcRequest {
     std::string method;
@@ -54,4 +54,4 @@ private:
     std::unordered_map<std::string, Handler> handlers_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

@@ -5,8 +5,8 @@
 #include "core/orchestrator.hpp"
 #include "ui/cli.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 int run_web(const CliOptions& opts);
 
-} // namespace swiftagent
+} // namespace praxis

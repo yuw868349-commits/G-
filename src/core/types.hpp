@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace swiftagent {
+namespace praxis {
 
 struct ToolCall {
     std::string name;
@@ -47,4 +47,4 @@ struct DependencySummary {
     std::vector<std::vector<ToolCall>> groups;
 };
 
-} // namespace swiftagent
+} // namespace praxis

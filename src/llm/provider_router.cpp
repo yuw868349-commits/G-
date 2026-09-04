@@ -5,7 +5,7 @@
 
 #include "core/model_cascade.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 void ProviderRouter::set(Tier tier, std::shared_ptr<Provider> provider) {
     if (!provider) {
@@ -37,4 +37,4 @@ std::size_t ProviderRouter::size() const noexcept {
     return n;
 }
 
-} // namespace swiftagent
+} // namespace praxis

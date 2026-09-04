@@ -2,7 +2,7 @@
 #include <sstream>
 #include "mcp/json_rpc.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 namespace {
 

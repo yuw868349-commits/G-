@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "core/model_cascade.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("cascade routes chores to small tier by default") {
     ModelCascade cascade;

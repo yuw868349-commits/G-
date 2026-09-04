@@ -7,7 +7,7 @@
 #include "tools/registry.hpp"
 #include "tools/tool.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 namespace {
 

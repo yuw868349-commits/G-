@@ -1,15 +1,15 @@
-# Multi-stage Dockerfile for SwiftAgent.
+# Multi-stage Dockerfile for Praxis.
 #
 # Build the CLI:
-#   docker build -t swiftagent:dev -f docker/Dockerfile.cli .
+#   docker build -t praxis:dev -f docker/Dockerfile.cli .
 # Run:
-#   docker run --rm -it swiftagent:dev --help
+#   docker run --rm -it praxis:dev --help
 #
 # Build the Python SDK wheel (used by the wheel.yml workflow):
-#   docker build -t swiftagent:wheel -f docker/Dockerfile.wheel --build-arg PYTHON=3.12 .
+#   docker build -t praxis:wheel -f docker/Dockerfile.wheel --build-arg PYTHON=3.12 .
 #
 # Build the dev image (full toolchain + Python + examples + tests):
-#   docker build -t swiftagent:dev-full -f docker/Dockerfile.dev .
+#   docker build -t praxis:dev-full -f docker/Dockerfile.dev .
 
 ARG BASE=debian:bookworm-slim
 ARG PYTHON_BASE=python:3.12-slim-bookworm
@@ -21,11 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libstdc++6 \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-COPY build/swiftagent /usr/local/bin/swiftagent
-RUN useradd -m -u 1000 swift && mkdir -p /workspace && chown -R swift:swift /workspace
-USER swift
+COPY build/praxis /usr/local/bin/praxis
+RUN useradd -m -u 1000 praxis && mkdir -p /workspace && chown -R praxis:praxis /workspace
+USER praxis
 WORKDIR /workspace
-ENTRYPOINT ["/usr/local/bin/swiftagent"]
+ENTRYPOINT ["/usr/local/bin/praxis"]
 CMD ["--help"]
 
 # ---- Wheel build: pybind11 + scikit-build-core + project source ----
@@ -61,6 +61,6 @@ WORKDIR /src
 COPY . /src
 RUN pip install --upgrade pip \
     && pip install "pybind11>=2.12" "scikit-build-core>=0.10" "pytest>=8" "ninja"
-RUN cmake -S . -B build -G Ninja -DSWIFTAGENT_BUILD_EXAMPLES=ON && cmake --build build -j
+RUN cmake -S . -B build -G Ninja -DPRAXIS_BUILD_EXAMPLES=ON && cmake --build build -j
 RUN ctest --test-dir build --output-on-failure
 CMD ["/bin/bash"]

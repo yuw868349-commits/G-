@@ -6,7 +6,7 @@
 #include <thread>
 #include <utility>
 
-namespace swiftagent {
+namespace praxis {
 
 ToolExecutor::ToolExecutor(ToolRegistry& registry) : registry_(registry) {}
 
@@ -112,4 +112,4 @@ ToolExecutor::execute(const std::vector<ToolCall>& calls,
     return out;
 }
 
-} // namespace swiftagent
+} // namespace praxis

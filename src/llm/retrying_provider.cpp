@@ -3,7 +3,7 @@
 #include <thread>
 #include <utility>
 
-namespace swiftagent {
+namespace praxis {
 
 RetryingProvider::RetryingProvider(std::shared_ptr<Provider> inner,
                                    RetryPolicy policy)
@@ -45,4 +45,4 @@ std::string RetryingProvider::name() const {
     return inner_ ? "retry(" + inner_->name() + ")" : "retry()";
 }
 
-} // namespace swiftagent
+} // namespace praxis

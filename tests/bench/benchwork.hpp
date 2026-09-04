@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace swiftagent {
+namespace praxis {
 
 struct BenchResult {
     std::string name;
@@ -25,4 +25,4 @@ public:
     static BenchResult dependency_install(std::size_t packages, bool parallel);
 };
 
-} // namespace swiftagent
+} // namespace praxis

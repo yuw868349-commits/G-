@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <vector>
 
-namespace swiftagent {
+namespace praxis {
 
 static std::string join(const HardKeys& keys) {
     std::string out;
@@ -262,4 +262,4 @@ Digest Digest::from_json(const nlohmann::json& json) {
     return digest;
 }
 
-} // namespace swiftagent
+} // namespace praxis

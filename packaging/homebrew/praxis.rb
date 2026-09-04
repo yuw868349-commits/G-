@@ -1,10 +1,10 @@
-class Swiftagent < Formula
+class Praxis < Formula
   desc "C++23 agent execution engine"
-  homepage "https://github.com/yuw868349-commits/swift-agent"
-  url "https://github.com/yuw868349-commits/swift-agent/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/yuw868349-commits/praxis"
+  url "https://github.com/yuw868349-commits/praxis/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
-  head "https://github.com/yuw868349-commits/swift-agent.git", branch: "main"
+  head "https://github.com/yuw868349-commits/praxis.git", branch: "main"
 
   depends_on "cmake" => :build
   depends_on "ninja" => :build
@@ -15,7 +15,7 @@ class Swiftagent < Formula
     system "cmake", "-S", ".", "-B", "build",
                     "-G", "Ninja",
                     "-DCMAKE_BUILD_TYPE=Release",
-                    "-DSWIFTAGENT_BUILD_TESTS=OFF",
+                    "-DPRAXIS_BUILD_TESTS=OFF",
                     *std_cmake_args
     system "cmake", "--build", "build", "-j"
     system "cmake", "--install", "build"
@@ -25,6 +25,6 @@ class Swiftagent < Formula
   end
 
   test do
-    assert_match "SwiftAgent", shell_output("#{bin}/swiftagent --help 2>&1", 0)
+    assert_match "Praxis", shell_output("#{bin}/praxis --help 2>&1", 0)
   end
 end

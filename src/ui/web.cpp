@@ -10,7 +10,7 @@
 #include "core/orchestrator.hpp"
 #include "core/telemetry.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -62,7 +62,7 @@ std::string index_html() {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>SwiftAgent Panel</title>
+<title>Praxis Panel</title>
 <style>
   body { font-family: -apple-system, system-ui, sans-serif; margin: 0; background: #111; color: #eee; }
   header { padding: 16px 24px; background: #1f1f1f; border-bottom: 1px solid #333; }
@@ -76,7 +76,7 @@ std::string index_html() {
 </style>
 </head>
 <body>
-<header><h1 style="margin:0">SwiftAgent Panel</h1></header>
+<header><h1 style="margin:0">Praxis Panel</h1></header>
 <main>
   <div class="row">
     <label>Task</label>
@@ -157,7 +157,7 @@ int run_web(const CliOptions& opts) {
     server.Get("/", [check_auth](const httplib::Request& req, httplib::Response& res) {
         if (!check_auth(req)) {
             res.status = 401;
-            res.set_header("WWW-Authenticate", "Basic realm=\"swiftagent\"");
+            res.set_header("WWW-Authenticate", "Basic realm=\"praxis\"");
             res.set_content("authentication required", "text/plain");
             return;
         }
@@ -166,7 +166,7 @@ int run_web(const CliOptions& opts) {
     server.Post("/run", [opts, check_auth](const httplib::Request& req, httplib::Response& res) {
         if (!check_auth(req)) {
             res.status = 401;
-            res.set_header("WWW-Authenticate", "Basic realm=\"swiftagent\"");
+            res.set_header("WWW-Authenticate", "Basic realm=\"praxis\"");
             res.set_content("authentication required", "text/plain");
             return;
         }
@@ -211,11 +211,11 @@ int run_web(const CliOptions& opts) {
                   << "' exposes the shell tool to the network. "
                   << "Pass --web-user/--web-pass or bind to 127.0.0.1.\n";
     }
-    std::cout << "swiftagent web panel listening on http://" << host
+    std::cout << "praxis web panel listening on http://" << host
               << ":" << opts.web_port
               << (require_auth ? " (basic-auth required)" : "")
               << "\n";
     return server.listen(host, opts.web_port) ? 0 : 1;
 }
 
-} // namespace swiftagent
+} // namespace praxis

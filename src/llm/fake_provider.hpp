@@ -6,7 +6,7 @@
 #include <vector>
 #include "llm/provider.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 class FakeProvider final : public Provider {
 public:
@@ -21,4 +21,4 @@ private:
     std::deque<nlohmann::json> steps_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

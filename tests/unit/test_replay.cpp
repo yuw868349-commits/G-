@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "core/replay.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 namespace {
 

@@ -9,7 +9,7 @@
 #include "core/digest.hpp"
 #include "core/fact_store.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 enum class RecallMode { Precise, Approximate, Degraded };
 
@@ -54,4 +54,4 @@ private:
     bool digest_dirty_{true};
 };
 
-} // namespace swiftagent
+} // namespace praxis

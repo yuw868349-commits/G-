@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace swiftagent {
+namespace praxis {
 
 struct Fact {
     std::string id;
@@ -38,4 +38,4 @@ private:
     std::ofstream out_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

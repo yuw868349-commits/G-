@@ -3,13 +3,13 @@ requires = ["scikit-build-core>=0.10", "pybind11>=2.12", "cmake>=3.24", "ninja"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "swiftagent"
+name = "praxis"
 version = "0.1.0"
 description = "C++23 agent execution engine with MCP, Python SDK, CLI, and Web panel."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
-authors = [{name = "SwiftAgent Contributors"}]
+authors = [{name = "Praxis Contributors"}]
 classifiers = ["Programming Language :: C++", "Programming Language :: Python :: 3"]
 dependencies = []
 

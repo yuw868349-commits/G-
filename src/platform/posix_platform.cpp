@@ -15,7 +15,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -247,4 +247,4 @@ std::unique_ptr<Platform> make_platform() {
     return make_posix_platform();
 }
 
-} // namespace swiftagent
+} // namespace praxis

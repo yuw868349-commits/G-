@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace swiftagent {
+namespace praxis {
 
 enum class ErrorKind {
     None,
@@ -23,4 +23,4 @@ struct Error {
     [[nodiscard]] static Error none() noexcept { return {}; }
 };
 
-} // namespace swiftagent
+} // namespace praxis

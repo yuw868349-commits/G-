@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -79,4 +79,4 @@ void JsonRpcClient::close() {
     // No-op for now; transports may override to flush.
 }
 
-} // namespace swiftagent
+} // namespace praxis

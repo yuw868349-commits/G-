@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "core/dependency_graph.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("dependency graph detects no conflict for independent calls") {
     DependencyGraph graph;

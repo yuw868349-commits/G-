@@ -23,7 +23,7 @@
 #include "llm/retrying_provider.hpp"
 #include "tools/tool.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct RunResult {
     bool completed{false};
@@ -139,4 +139,4 @@ private:
     std::shared_ptr<ToolContext> tool_ctx_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

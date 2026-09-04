@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace swiftagent {
+namespace praxis {
 
 struct FileSnapshot {
     std::filesystem::file_time_type mtime{};
@@ -36,4 +36,4 @@ private:
     std::unordered_map<std::string, FileSnapshot> before_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

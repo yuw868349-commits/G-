@@ -17,7 +17,7 @@ namespace {
 
 // A noop tool context: tools normally read files / run commands, but
 // this stub returns empty results so the example stays self-contained.
-class StubContext final : public swiftagent::ToolContext
+class StubContext final : public praxis::ToolContext
 {
 public:
     std::string read_file(const std::string&) override { return {}; }
@@ -25,14 +25,14 @@ public:
     bool file_exists(const std::string&) const override { return false; }
 };
 
-class ReverseTool final : public swiftagent::Tool
+class ReverseTool final : public praxis::Tool
 {
 public:
-    explicit ReverseTool(std::shared_ptr<swiftagent::ToolContext> ctx) : ctx_(std::move(ctx)) {}
+    explicit ReverseTool(std::shared_ptr<praxis::ToolContext> ctx) : ctx_(std::move(ctx)) {}
 
-    swiftagent::ToolDescriptor descriptor() const override
+    praxis::ToolDescriptor descriptor() const override
     {
-        return swiftagent::ToolDescriptor{
+        return praxis::ToolDescriptor{
             "reverse",
             "Reverse a string.",
             {{"type", "object"}, {"properties", {{"text", {{"type", "string"}}}}}, {"required", {"text"}}},
@@ -40,7 +40,7 @@ public:
         };
     }
 
-    swiftagent::ToolResult invoke(const swiftagent::ToolCall& call, swiftagent::ToolContext&) override
+    praxis::ToolResult invoke(const praxis::ToolCall& call, praxis::ToolContext&) override
     {
         nlohmann::json args;
         try
@@ -49,22 +49,22 @@ public:
         }
         catch (const nlohmann::json::exception&)
         {
-            return swiftagent::ToolResult{false, nullptr, "bad arguments", {}};
+            return praxis::ToolResult{false, nullptr, "bad arguments", {}};
         }
         const std::string text = args.value("text", "");
         std::string out(text.rbegin(), text.rend());
-        return swiftagent::ToolResult{true, out, "", {}};
+        return praxis::ToolResult{true, out, "", {}};
     }
 
 private:
-    std::shared_ptr<swiftagent::ToolContext> ctx_;
+    std::shared_ptr<praxis::ToolContext> ctx_;
 };
 
 } // namespace
 
 int main()
 {
-    using namespace swiftagent;
+    using namespace praxis;
 
     auto stub = std::make_shared<StubContext>();
     auto reverse = std::make_unique<ReverseTool>(stub);

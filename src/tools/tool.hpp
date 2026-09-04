@@ -12,13 +12,13 @@
 #include <vector>
 #include "core/types.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 class ToolCall;
 class ToolResult;
 class ToolContext;
 
-using ToolCall = swiftagent::ToolCall;
+using ToolCall = praxis::ToolCall;
 
 struct ToolDescriptor {
     std::string name;
@@ -118,4 +118,4 @@ public:
     [[nodiscard]] bool file_exists(const std::string& path) const override;
 };
 
-} // namespace swiftagent
+} // namespace praxis

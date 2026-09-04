@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Create the standard SwiftAgent issue labels on GitHub via the API.
+# Create the standard Praxis issue labels on GitHub via the API.
 # Run once after creating the repo (or whenever you need to reset labels).
 #
 # Requires: GH_TOKEN / GITHUB_TOKEN env var with repo scope.
 set -euo pipefail
 
-REPO="${REPO:-yuw868349-commits/swift-agent}"
+REPO="${REPO:-yuw868349-commits/praxis}"
 API="https://api.github.com/repos/${REPO}/labels"
 
 declare -a LABELS=(

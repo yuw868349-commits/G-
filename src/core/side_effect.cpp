@@ -4,7 +4,7 @@
 #include <sstream>
 #include <unordered_map>
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -129,4 +129,4 @@ std::optional<std::string> SideEffectObserver::hash_of(const std::string& path) 
     return it->second.hash;
 }
 
-} // namespace swiftagent
+} // namespace praxis

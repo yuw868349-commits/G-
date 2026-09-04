@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <map>
 
-namespace swiftagent {
+namespace praxis {
 
 enum class Tier { Small, Large };
 
@@ -36,4 +36,4 @@ private:
     std::map<Tier, TierState> tiers_;
 };
 
-} // namespace swiftagent
+} // namespace praxis

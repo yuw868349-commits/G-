@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace swiftagent {
+namespace praxis {
 
 void Telemetry::record_module(const std::string& name, double ms) {
     auto it = std::find_if(modules_.begin(), modules_.end(),
@@ -83,4 +83,4 @@ nlohmann::json Telemetry::report() const {
     return j;
 }
 
-} // namespace swiftagent
+} // namespace praxis

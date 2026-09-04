@@ -3,7 +3,7 @@
 #include <filesystem>
 #include "core/fact_store.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 using Catch::Matchers::ContainsSubstring;
 
 TEST_CASE("fact store deduplicates by content address") {

@@ -1,7 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "core/digest.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 TEST_CASE("normalizer extracts hard keys from structured text") {
     Normalizer n;

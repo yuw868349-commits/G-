@@ -2,7 +2,7 @@
 
 #include "core/error.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 // The decision-tier review prompt is constructed by the
@@ -53,4 +53,4 @@ Result<ModelResponse> FakeProvider::complete(const Messages& context) {
     return Result<ModelResponse>::ok(std::move(response));
 }
 
-} // namespace swiftagent
+} // namespace praxis

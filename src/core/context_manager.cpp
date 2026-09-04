@@ -1,6 +1,6 @@
 #include "core/context_manager.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 ContextManager::ContextManager(std::size_t token_budget)
     : token_budget_(token_budget),
@@ -77,4 +77,4 @@ std::optional<RecallResult> ContextManager::recall(const std::string& fact_id) {
     return RecallResult{RecallMode::Precise, fact->id, fact->content, 1.0};
 }
 
-} // namespace swiftagent
+} // namespace praxis

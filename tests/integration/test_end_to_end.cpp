@@ -8,7 +8,7 @@
 #include "llm/fake_provider.hpp"
 #include "tools/builtin.hpp"
 
-using namespace swiftagent;
+using namespace praxis;
 
 namespace {
 
@@ -112,7 +112,7 @@ TEST_CASE("end-to-end read_file sees real on-disk content written by the agent")
     // see "file not found" and fail.
     namespace fs = std::filesystem;
     fs::path tmp_root = fs::temp_directory_path() /
-                       ("swiftagent_e2e_" + std::to_string(::getpid()));
+                       ("praxis_e2e_" + std::to_string(::getpid()));
     fs::create_directories(tmp_root);
     const fs::path target = tmp_root / "data.txt";
 
@@ -220,7 +220,7 @@ TEST_CASE("end-to-end shell tool does not interpret shell metacharacters") {
     // arguments as separate argv entries; metacharacters in argv
     // strings must NOT be interpreted as shell syntax.
     namespace fs = std::filesystem;
-    auto target = fs::temp_directory_path() / "swiftagent_shell_inject_probe";
+    auto target = fs::temp_directory_path() / "praxis_shell_inject_probe";
     std::error_code ec;
     fs::remove(target, ec);
 
@@ -255,7 +255,7 @@ TEST_CASE("end-to-end cache key is reused for repeat identical calls") {
     // and verify that the second one comes from cache.
     namespace fs = std::filesystem;
     fs::path tmp_root = fs::temp_directory_path() /
-                       ("swiftagent_cache_" + std::to_string(::getpid()));
+                       ("praxis_cache_" + std::to_string(::getpid()));
     fs::create_directories(tmp_root);
     const fs::path target = tmp_root / "stable.txt";
     {

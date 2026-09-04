@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace swiftagent {
+namespace praxis {
 
 struct CacheEntry {
     std::string key;
@@ -52,4 +52,4 @@ private:
     mutable std::size_t misses_{0};
 };
 
-} // namespace swiftagent
+} // namespace praxis

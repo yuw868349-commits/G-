@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace swiftagent {
+namespace praxis {
 
 bool Cache::is_valid(const CacheEntry& entry,
                      const std::vector<std::string>& current) const {
@@ -105,4 +105,4 @@ std::size_t Cache::size() const noexcept {
     return entries_.size();
 }
 
-} // namespace swiftagent
+} // namespace praxis

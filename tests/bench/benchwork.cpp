@@ -14,7 +14,7 @@
 #include "tools/builtin.hpp"
 #include "tools/registry.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 namespace {
 
@@ -133,4 +133,4 @@ BenchResult BenchHarness::dependency_install(std::size_t packages, bool parallel
                      static_cast<double>(packages) * 5.0);
 }
 
-} // namespace swiftagent
+} // namespace praxis

@@ -6,7 +6,7 @@
 #include <vector>
 #include "core/event.hpp"
 
-namespace swiftagent {
+namespace praxis {
 
 struct CausalEdge {
     std::uint64_t from{0};
@@ -36,4 +36,4 @@ private:
     std::uint64_t last_seq_{0};
 };
 
-} // namespace swiftagent
+} // namespace praxis
