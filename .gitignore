@@ -10,3 +10,4 @@ out/
 *.swp
 .DS_Store
 docs/doxygen/
+Testing/Temporary/
