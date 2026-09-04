@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Setup GitHub repository metadata for the Praxis rename.
 #
-# Prerequisites:
-#   gh auth login   (one-time, interactive)
+# Prerequisites (one of):
+#   * gh auth login                       (interactive, normal workstation)
+#   * GH_TOKEN / GITHUB_TOKEN env var     (headless / CI / sandbox)
 #
 # What this script does:
 #   1. Renames the existing repository from `swift-agent` to `praxis`
@@ -21,11 +22,29 @@ ORG="yuw868349-commits"
 OLD_NAME="swift-agent"
 NEW_NAME="praxis"
 
-# Detect which token / auth mode the user has.
+# Auth shim: if `gh` is not authenticated but a token is in the
+# environment, log gh in with it before doing anything else.  This
+# makes the script work in sandboxes and CI without a separate
+# `gh auth login` step.
 if ! gh auth status >/dev/null 2>&1; then
-    echo "error: not authenticated.  Run 'gh auth login' first." >&2
-    exit 1
+    if [ -n "${GH_TOKEN:-${GITHUB_TOKEN:-}}" ]; then
+        echo ">>> gh not authenticated; logging in from GH_TOKEN env"
+        echo "${GH_TOKEN}" | gh auth login --with-token >/dev/null
+        gh auth setup-git >/dev/null 2>&1 || true
+    else
+        echo "error: not authenticated." >&2
+        echo "  Either run 'gh auth login' or set GH_TOKEN / GITHUB_TOKEN." >&2
+        exit 1
+    fi
 fi
+
+# Sanity-check the credentials actually work before doing anything
+# destructive (rename, etc).
+gh auth status >/dev/null
+gh_api() {
+    gh api "$@"
+}
+export -f gh_api
 
 # Step 1: rename or create the repo.
 if gh repo view "${ORG}/${OLD_NAME}" >/dev/null 2>&1; then
