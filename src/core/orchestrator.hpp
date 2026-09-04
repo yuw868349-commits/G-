@@ -20,6 +20,7 @@
 #include "core/types.hpp"
 #include "llm/provider.hpp"
 #include "llm/provider_router.hpp"
+#include "llm/retrying_provider.hpp"
 #include "tools/tool.hpp"
 
 namespace swiftagent {
@@ -42,6 +43,11 @@ struct OrchestratorOptions {
     std::filesystem::path side_effect_root{};
     // When true, treat every tool call as cacheable.
     bool cache_tools{true};
+    // Retry policy applied to every Provider that the orchestrator
+    // routes a request through. Leave the default to get finite retries
+    // with exponential backoff; pass `RetryPolicy{1, std::chrono::milliseconds{0}}`
+    // to disable.
+    RetryPolicy retry_policy{};
 };
 
 // Main entry point. Owns all collaborators and exposes a narrow public
@@ -131,7 +137,6 @@ private:
     Telemetry telemetry_;
     SideEffectObserver side_effects_;
     std::shared_ptr<ToolContext> tool_ctx_;
-    Provider* single_provider_{nullptr};
 };
 
 } // namespace swiftagent

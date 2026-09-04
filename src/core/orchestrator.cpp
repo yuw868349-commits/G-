@@ -57,9 +57,15 @@ Orchestrator::Orchestrator(Provider& provider, OrchestratorOptions options)
     : options_(std::move(options)),
       executor_(registry_),
       context_(options_.token_budget) {
-    router_.set(Tier::Small, std::shared_ptr<Provider>(&provider, [](Provider*) {}));
-    router_.set(Tier::Large, std::shared_ptr<Provider>(&provider, [](Provider*) {}));
-    single_provider_ = &provider;
+    // Wrap the user-supplied provider in a RetryingProvider so transient
+    // network/HTTP failures are absorbed by the orchestrator instead of
+    // taking down the whole run.  The shared_ptr holds a no-op deleter
+    // because `provider` has external lifetime.
+    auto retrying = std::make_shared<RetryingProvider>(
+        std::shared_ptr<Provider>(&provider, [](Provider*) {}),
+        options_.retry_policy);
+    router_.set(Tier::Small, retrying);
+    router_.set(Tier::Large, retrying);
 }
 
 Orchestrator::Orchestrator(ProviderRouter& router, OrchestratorOptions options)
@@ -95,16 +101,18 @@ void Orchestrator::set_provider(Tier tier, std::shared_ptr<Provider> provider) {
     if (!provider) {
         return;
     }
-    router_.set(tier, std::move(provider));
+    // Wrap the new provider in a RetryingProvider so callers that hot-
+    // swap a tier (e.g. for failover) keep the same retry semantics as
+    // the constructor path.
+    auto retrying = std::make_shared<RetryingProvider>(
+        std::move(provider), options_.retry_policy);
+    router_.set(tier, std::move(retrying));
 }
 
 Result<ModelResponse>
 Orchestrator::complete_for(Role role, const Messages& messages) {
     Tier tier = cascade_.route_for(role);
     if (!router_.has_tier(tier)) {
-        if (single_provider_) {
-            return single_provider_->complete(messages);
-        }
         return Result<ModelResponse>::fail(
             Error{ErrorKind::Internal, "no provider for tier " +
                   std::to_string(static_cast<int>(tier))});
