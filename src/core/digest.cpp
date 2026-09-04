@@ -1,5 +1,8 @@
 #include "core/digest.hpp"
 
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <vector>
 
 namespace swiftagent {
@@ -114,13 +117,122 @@ std::size_t estimate_tokens(const std::string& text) {
     return count;
 }
 
+namespace {
+
+constexpr std::size_t kSoftDim = 64;
+
+std::uint64_t fnv1a(const std::string& data) {
+    std::uint64_t h = 1469598103934665603ULL;
+    for (unsigned char c : data) {
+        h ^= c;
+        h *= 1099511628211ULL;
+    }
+    return h;
+}
+
+// Feature-hashing bag-of-ngrams. Each word contributes its hash to a
+// 64-dimensional embedding, plus optional bigrams and trigrams. The
+// result is L2-normalized so that two documents with the same
+// vocabulary produce a cosine similarity close to 1.
+SoftFingerprint build_soft(const std::string& content) {
+    SoftFingerprint fp;
+    fp.embedding.assign(kSoftDim, 0.0);
+    if (content.empty()) {
+        fp.confidence = 0.0;
+        return fp;
+    }
+    auto cps = decode_codepoints(content);
+    std::vector<std::string> tokens;
+    std::string current;
+    auto flush = [&] {
+        if (!current.empty()) {
+            tokens.push_back(current);
+            current.clear();
+        }
+    };
+    for (char32_t cp : cps) {
+        if (cp == U' ' || cp == U'\n' || cp == U'\t' || cp == U'\r') {
+            flush();
+        } else if (cp >= 0x80) {
+            flush();
+            char buf[16];
+            int n = std::snprintf(buf, sizeof(buf), "%08x",
+                                  static_cast<unsigned>(cp));
+            tokens.emplace_back(buf, static_cast<std::size_t>(n));
+        } else {
+            current.push_back(static_cast<char>(
+                std::tolower(static_cast<int>(cp))));
+        }
+    }
+    flush();
+
+    auto deposit = [&](const std::string& tok, double weight) {
+        std::uint64_t h = fnv1a(tok);
+        std::size_t bucket = static_cast<std::size_t>(h % kSoftDim);
+        int sign = (h & 1ULL) ? 1 : -1;
+        fp.embedding[bucket] += weight * sign;
+    };
+
+    for (std::size_t i = 0; i < tokens.size(); ++i) {
+        deposit(tokens[i], 1.0);
+        if (i + 1 < tokens.size()) {
+            deposit(tokens[i] + " " + tokens[i + 1], 0.5);
+        }
+        if (i + 2 < tokens.size()) {
+            deposit(tokens[i] + " " + tokens[i + 1] + " " + tokens[i + 2],
+                    0.25);
+        }
+    }
+    double norm = 0.0;
+    for (double v : fp.embedding) {
+        norm += v * v;
+    }
+    norm = std::sqrt(norm);
+    if (norm > 0.0) {
+        for (double& v : fp.embedding) {
+            v /= norm;
+        }
+    }
+    // Confidence saturates once the embedding has seen enough distinct
+    // tokens to make the cosine signal meaningful.
+    fp.confidence = std::min(1.0, static_cast<double>(tokens.size()) / 16.0);
+    return fp;
+}
+
+} // namespace
+
 Digest Digest::build(const std::string& type, const std::string& content) {
     Digest digest;
     digest.hard_keys_ = Normalizer::hard_keys(content);
     digest.hard_fingerprint_ = type + "\n" + join(digest.hard_keys_);
-    digest.soft_.embedding = {0.0};
-    digest.soft_.confidence = digest.hard_keys_.empty() ? 0.3 : 1.0;
+    digest.soft_ = build_soft(content);
     return digest;
+}
+
+bool Digest::matches_soft(const Digest& other, double threshold) const {
+    if (soft_.embedding.size() != other.soft_.embedding.size()) {
+        return false;
+    }
+    if (soft_.embedding.empty()) {
+        return false;
+    }
+    double dot = 0.0;
+    for (std::size_t i = 0; i < soft_.embedding.size(); ++i) {
+        dot += soft_.embedding[i] * other.soft_.embedding[i];
+    }
+    return dot >= threshold;
+}
+
+double Digest::soft_similarity(const Digest& other) const {
+    if (soft_.embedding.size() != other.soft_.embedding.size() ||
+        soft_.embedding.empty()) {
+        return 0.0;
+    }
+    double dot = 0.0;
+    for (std::size_t i = 0; i < soft_.embedding.size(); ++i) {
+        dot += soft_.embedding[i] * other.soft_.embedding[i];
+    }
+    return dot;
 }
 
 nlohmann::json Digest::to_json() const {

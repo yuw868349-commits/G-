@@ -39,6 +39,9 @@ public:
     [[nodiscard]] bool matches_hard(const Digest& other) const noexcept {
         return hard_fingerprint_ == other.hard_fingerprint_;
     }
+    [[nodiscard]] bool matches_soft(const Digest& other,
+                                    double threshold = 0.5) const;
+    [[nodiscard]] double soft_similarity(const Digest& other) const;
 
     [[nodiscard]] nlohmann::json to_json() const;
     [[nodiscard]] static Digest from_json(const nlohmann::json& json);
