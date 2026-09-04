@@ -15,6 +15,22 @@ struct McpToolSpec {
     nlohmann::json schema = nlohmann::json::object();
 };
 
+class McpTool final : public Tool {
+public:
+    McpTool(std::string name, std::string description, nlohmann::json schema,
+            std::shared_ptr<JsonRpcClient> client, std::string prefix);
+
+    ToolDescriptor descriptor() const override;
+    ToolResult invoke(const ToolCall& call, ToolContext& ctx) override;
+
+private:
+    std::string name_;
+    std::string description_;
+    nlohmann::json schema_;
+    std::shared_ptr<JsonRpcClient> client_;
+    std::string prefix_;
+};
+
 class McpHost {
 public:
     explicit McpHost(ToolRegistry& registry);
@@ -28,10 +44,11 @@ public:
 
 private:
     void register_remote_tool(const McpToolSpec& spec, const std::string& prefix,
-                              JsonRpcClient* client);
+                              std::shared_ptr<JsonRpcClient> client);
 
     ToolRegistry& registry_;
     std::vector<McpToolSpec> tools_;
+    std::vector<std::shared_ptr<JsonRpcClient>> clients_;
 };
 
 } // namespace swiftagent

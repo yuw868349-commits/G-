@@ -2,10 +2,13 @@
 #include <exception>
 #include <iostream>
 
+#include "platform/platform.hpp"
 #include "ui/cli.hpp"
 #include "ui/web.hpp"
 
 int main(int argc, char** argv) {
+    auto platform = swiftagent::make_platform();
+    (void)platform;
     try {
         auto opts = swiftagent::parse_cli(argc, argv);
         if (opts.use_web) {

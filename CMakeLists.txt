@@ -35,6 +35,10 @@ add_library(swiftagent_core STATIC
 )
 target_link_libraries(swiftagent_core PUBLIC swiftagent_deps)
 
+if(WIN32)
+    target_sources(swiftagent_core PRIVATE src/platform/windows_platform.cpp)
+endif()
+
 add_library(swiftagent_tools STATIC
     src/tools/registry.cpp
     src/tools/builtin.cpp
@@ -79,3 +83,9 @@ add_executable(integration_tests
 )
 target_link_libraries(integration_tests PRIVATE Catch2::Catch2WithMain swiftagent_core swiftagent_tools swiftagent_llm)
 catch_discover_tests(integration_tests)
+
+add_executable(bench_main
+    tests/bench/bench_main.cpp
+    tests/bench/benchwork.cpp
+)
+target_link_libraries(bench_main PRIVATE swiftagent_core swiftagent_tools swiftagent_llm)

@@ -98,8 +98,12 @@ public:
     }
 };
 
-std::unique_ptr<Platform> make_platform() {
+std::unique_ptr<Platform> make_posix_platform() {
     return std::make_unique<PosixPlatform>();
+}
+
+std::unique_ptr<Platform> make_platform() {
+    return make_posix_platform();
 }
 
 } // namespace swiftagent

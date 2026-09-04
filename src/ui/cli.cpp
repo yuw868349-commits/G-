@@ -1,5 +1,7 @@
 #include "ui/cli.hpp"
 
+#include "platform/platform.hpp"
+
 #include <cstring>
 #include <iostream>
 #include <stdexcept>

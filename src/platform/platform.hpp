@@ -37,4 +37,10 @@ public:
 
 std::unique_ptr<Platform> make_platform();
 
+#ifdef _WIN32
+std::unique_ptr<Platform> make_windows_platform();
+#else
+std::unique_ptr<Platform> make_posix_platform();
+#endif
+
 } // namespace swiftagent
