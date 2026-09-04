@@ -8,6 +8,23 @@
 
 namespace swiftagent {
 
+namespace {
+
+// Perform the MCP handshake: send `initialize` and the
+// `notifications/initialized` notification. Throws on failure.
+void perform_mcp_handshake(JsonRpcClient& client) {
+    nlohmann::json init_params = {
+        {"protocolVersion", "2024-11-05"},
+        {"capabilities", nlohmann::json::object()},
+        {"clientInfo", {{"name", "swiftagent"}, {"version", "0.1.0"}}},
+    };
+    auto init_result = client.call("initialize", init_params);
+    (void)init_result;  // server returns serverInfo + capabilities
+    client.notify("notifications/initialized", nlohmann::json::object());
+}
+
+} // namespace
+
 McpTool::McpTool(std::string name, std::string description, nlohmann::json schema,
                  std::shared_ptr<JsonRpcClient> client, std::string prefix)
     : name_(std::move(name)),
@@ -30,8 +47,43 @@ ToolResult McpTool::invoke(const ToolCall& call, ToolContext&) {
     } catch (const nlohmann::json::exception&) {
         return ToolResult{false, nullptr, "invalid arguments", {}};
     }
+    // Strip the namespacing prefix (e.g. "file__" in "file__list_dir") to
+    // recover the original MCP tool name.
+    std::string remote_name = call.name;
+    if (!prefix_.empty()) {
+        const std::string sep = prefix_ + "__";
+        if (remote_name.rfind(sep, 0) == 0) {
+            remote_name = remote_name.substr(sep.size());
+        }
+    }
+    nlohmann::json call_params = {
+        {"name", remote_name},
+        {"arguments", params},
+    };
     try {
-        auto result = client_->call(prefix_ + "/" + call.name, params);
+        auto result = client_->call("tools/call", call_params);
+        // MCP responses include {content: [{type: "text", text: "..."}], isError, structuredContent}
+        if (result.is_object() && result.value("isError", false)) {
+            std::string msg = "remote tool error";
+            if (result.contains("content") && result["content"].is_array() &&
+                !result["content"].empty()) {
+                const auto& first = result["content"][0];
+                if (first.is_object() && first.contains("text")) {
+                    msg = first["text"].get<std::string>();
+                }
+            }
+            return ToolResult{false, nullptr, msg, {}};
+        }
+        if (result.is_object() && result.contains("structuredContent")) {
+            return ToolResult{true, result["structuredContent"], "", {}};
+        }
+        if (result.is_object() && result.contains("content") &&
+            result["content"].is_array() && !result["content"].empty()) {
+            const auto& first = result["content"][0];
+            if (first.is_object() && first.contains("text")) {
+                return ToolResult{true, first["text"], "", {}};
+            }
+        }
         return ToolResult{true, result, "", {}};
     } catch (const std::exception& e) {
         return ToolResult{false, nullptr, e.what(), {}};
@@ -98,6 +150,7 @@ void McpHost::attach_stdio(std::unique_ptr<JsonRpcTransport> transport,
     auto* raw = transport.release();
     auto client = std::make_shared<JsonRpcClient>(*raw);
     clients_.push_back(client);
+    perform_mcp_handshake(*client);
     auto payload = client->call("tools/list");
     if (payload.contains("tools") && payload["tools"].is_array()) {
         for (const auto& t : payload["tools"]) {
@@ -133,6 +186,7 @@ void McpHost::attach_sse_url(const std::string& url, const std::string& prefix) 
     auto* raw = transport.release();
     auto client_obj = std::make_shared<JsonRpcClient>(*raw);
     clients_.push_back(client_obj);
+    perform_mcp_handshake(*client_obj);
     auto payload = client_obj->call("tools/list");
     if (payload.contains("tools") && payload["tools"].is_array()) {
         for (const auto& t : payload["tools"]) {

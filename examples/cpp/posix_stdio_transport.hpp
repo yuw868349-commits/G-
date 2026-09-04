@@ -92,7 +92,9 @@ public:
     {
         if (!line_.empty())
         {
-            return pop_line();
+            std::string out = std::move(line_);
+            line_.clear();
+            return out;
         }
         char buf[4096];
         ssize_t n = ::read(read_fd_, buf, sizeof(buf));
@@ -112,14 +114,13 @@ private:
         auto pos = buffer_.find('\n');
         if (pos == std::string::npos)
         {
-            line_ = buffer_;
+            std::string out = std::move(buffer_);
             buffer_.clear();
-            return line_;
+            return out;
         }
         std::string out = buffer_.substr(0, pos);
         buffer_.erase(0, pos + 1);
-        line_ = out;
-        return line_;
+        return out;
     }
 
     pid_t pid_{-1};
