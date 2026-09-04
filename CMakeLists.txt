@@ -18,6 +18,7 @@ swiftagent_target_warnings(swiftagent_deps)
 add_library(swiftagent_core STATIC
     src/core/model_cascade.cpp
     src/core/fact_store.cpp
+    src/core/digest.cpp
 )
 target_link_libraries(swiftagent_core PUBLIC swiftagent_deps)
 
@@ -37,6 +38,7 @@ add_executable(unit_tests
     tests/unit/test_llm.cpp
     tests/unit/test_cascade.cpp
     tests/unit/test_fact_store.cpp
+    tests/unit/test_digest.cpp
 )
 target_link_libraries(unit_tests PRIVATE Catch2::Catch2WithMain swiftagent_core swiftagent_llm)
 
