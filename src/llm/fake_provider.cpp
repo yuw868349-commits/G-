@@ -20,7 +20,8 @@ Result<ModelResponse> FakeProvider::complete(const Messages& context) {
 
     ModelResponse response;
     response.outcome.plan = step.value("plan", "no plan stated");
-    response.outcome.has_tool_use = step.contains("tool_calls") && step["tool_calls"].is_array();
+    response.outcome.has_tool_use = step.contains("tool_calls") && step["tool_calls"].is_array()
+                                   && !step["tool_calls"].empty();
     auto tool_calls = step.value("tool_calls", nlohmann::json::array());
     response.outcome.tool_count = static_cast<std::uint32_t>(tool_calls.size());
     response.raw = step;

@@ -60,7 +60,7 @@ Result<ModelResponse> OpenAIProvider::complete(const Messages& context) {
     if (!tool_calls.is_array()) {
         tool_calls = nlohmann::json::array();
     }
-    response.outcome.has_tool_use = !tool_calls.empty();
+    response.outcome.has_tool_use = tool_calls.is_array() && !tool_calls.empty();
     response.outcome.tool_count = static_cast<std::uint32_t>(tool_calls.size());
     return Result<ModelResponse>::ok(std::move(response));
 }
