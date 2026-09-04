@@ -5,7 +5,7 @@
 # Requires: GH_TOKEN / GITHUB_TOKEN env var with repo scope.
 set -euo pipefail
 
-REPO="${REPO:-yuw868349-commits/G-}"
+REPO="${REPO:-yuw868349-commits/swift-agent}"
 API="https://api.github.com/repos/${REPO}/labels"
 
 declare -a LABELS=(

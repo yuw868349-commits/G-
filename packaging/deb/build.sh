@@ -38,7 +38,7 @@ Description: C++23 agent execution engine
  context manager, tool executor, cache, replay, and telemetry. It
  speaks MCP (stdio + SSE) to attach external tools and ships with
  a Python SDK (pybind11).
-Homepage: https://github.com/yuw868349-commits/G-
+Homepage: https://github.com/yuw868349-commits/swift-agent
 EOF
 
 cat >"$WORK/swiftagent-${VERSION}/usr/local/lib/pkgconfig/swiftagent.pc" <<EOF

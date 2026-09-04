@@ -10,9 +10,9 @@ type: software
 title: SwiftAgent
 version: 0.1.0
 date-released: 2026-09-04
-url: https://github.com/yuw868349-commits/G-
-repository-code: https://github.com/yuw868349-commits/G-
-repository: https://github.com/yuw868349-commits/G-
+url: https://github.com/yuw868349-commits/swift-agent
+repository-code: https://github.com/yuw868349-commits/swift-agent
+repository: https://github.com/yuw868349-commits/swift-agent
 keywords:
   - agent
   - llm
@@ -27,7 +27,7 @@ authors:
     affiliation: SwiftAgent Project
 contact:
   - name: SwiftAgent Issues
-    url: https://github.com/yuw868349-commits/G-/issues
+    url: https://github.com/yuw868349-commits/swift-agent/issues
 references:
   - type: software
     title: Model Context Protocol specification

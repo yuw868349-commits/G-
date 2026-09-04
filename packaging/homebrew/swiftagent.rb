@@ -1,10 +1,10 @@
 class Swiftagent < Formula
   desc "C++23 agent execution engine"
-  homepage "https://github.com/yuw868349-commits/G-"
-  url "https://github.com/yuw868349-commits/G-/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/yuw868349-commits/swift-agent"
+  url "https://github.com/yuw868349-commits/swift-agent/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
-  head "https://github.com/yuw868349-commits/G-.git", branch: "main"
+  head "https://github.com/yuw868349-commits/swift-agent.git", branch: "main"
 
   depends_on "cmake" => :build
   depends_on "ninja" => :build

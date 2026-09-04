@@ -6,8 +6,8 @@ Version:        0.1.0
 Release:        1%{?dist}
 Summary:        C++23 agent execution engine
 License:        MIT
-URL:            https://github.com/yuw868349-commits/G-
-Source0:        https://github.com/yuw868349-commits/G-/archive/v%{version}.tar.gz
+URL:            https://github.com/yuw868349-commits/swift-agent
+Source0:        https://github.com/yuw868349-commits/swift-agent/archive/v%{version}.tar.gz
 
 BuildRequires:  cmake >= 3.24
 BuildRequires:  ninja-build
@@ -29,7 +29,7 @@ Requires:       %{name}%{?_isa} = %{version}-%{release}
 Headers and pkg-config file for building against swiftagent.
 
 %prep
-%autosetup -n G--%{commit0}
+%autosetup -n swift-agent-%{commit0}
 
 %build
 %cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSWIFTAGENT_BUILD_TESTS=OFF
