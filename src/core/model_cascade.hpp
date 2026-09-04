@@ -18,6 +18,7 @@ public:
     void record_failure(Tier tier, Role role);
     void set_max_failures_before_pin(std::uint32_t max_failures);
     void set_missing_upgrade_threshold(double threshold);
+    void clear_pin() noexcept;
 
     [[nodiscard]] double divergence_rate(Tier tier) const;
     [[nodiscard]] bool is_pinned(Tier tier) const;

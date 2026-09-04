@@ -1,5 +1,7 @@
 #include "core/model_cascade.hpp"
 
+#include <stdexcept>
+
 namespace swiftagent {
 
 Tier ModelCascade::route_for(Role role) const {
@@ -41,7 +43,15 @@ void ModelCascade::set_max_failures_before_pin(std::uint32_t max_failures) {
 }
 
 void ModelCascade::set_missing_upgrade_threshold(double threshold) {
+    if (threshold < 0.0 || threshold > 1.0) {
+        throw std::out_of_range("threshold must be in [0, 1]");
+    }
     missing_upgrade_threshold_ = threshold;
+}
+
+void ModelCascade::clear_pin() noexcept {
+    chore_pinned_ = false;
+    tiers_.clear();
 }
 
 double ModelCascade::divergence_rate(Tier tier) const {
@@ -54,10 +64,20 @@ double ModelCascade::divergence_rate(Tier tier) const {
 }
 
 bool ModelCascade::is_pinned(Tier tier) const {
-    if (tier == Tier::Large) {
-        return true;
+    if (tier == Tier::Small) {
+        return chore_pinned_;
     }
-    return chore_pinned_;
+    // The large tier is only "pinned" once we have actual evidence that
+    // small-tier escalations are too frequent. Until then, callers may
+    // still use the small model for non-decision roles.
+    if (!chore_pinned_) {
+        return false;
+    }
+    auto it = tiers_.find(Tier::Small);
+    if (it == tiers_.end() || it->second.attempts == 0) {
+        return false;
+    }
+    return divergence_rate(Tier::Small) > missing_upgrade_threshold_;
 }
 
 } // namespace swiftagent
